@@ -1,7 +1,8 @@
 import React, { Component, Fragment, Placeholder } from 'react';
 import { createResource } from 'simple-cache-provider';
-import TodoList from './TodoList';
 import { withCache } from '../withCache';
+import TodoList from './TodoList';
+import todos from './todos-data.js';
 
 // Create our resource
 const getTodos = createResource(
@@ -9,7 +10,7 @@ const getTodos = createResource(
     new Promise(resolve => {
       setTimeout(() => {
         resolve(todos);
-      }, 500);
+      }, 3000);
     })
 );
 
@@ -19,23 +20,13 @@ const Todos = withCache(props => {
   return <TodoList todos={data} />;
 });
 
-// Create loader
-const Placeholder = props => {
-  return (
-    <Timeout ms={1000}>
-      {didTimeout => {
-        return didTimeout ? <Loading /> : props.children;
-      }}
-    </Timeout>
-  );
-};
 export default class App extends Component {
 
   render() {
     return (
       <Fragment>
         <h1>Suspense</h1>
-        <Placeholder delayMs={500} fallback={<div>🌀 'Loading....'</div>}>
+        <Placeholder delayMs={2000} fallback={<div>🌀 'Loading....'</div>}>
           <Todos />
         </Placeholder>
       </Fragment>
