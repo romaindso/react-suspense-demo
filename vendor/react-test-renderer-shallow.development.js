@@ -62,7 +62,7 @@ function invariant(condition, format, a, b, c, d, e, f) {
 }
 
 // Relying on the `invariant()` implementation lets us
-// have preserve the format and params in the www builds.
+// preserve the format and params in the www builds.
 
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
@@ -131,8 +131,32 @@ function isForwardRef(object) {
   return typeOf(object) === REACT_FORWARD_REF_TYPE;
 }
 
+var BEFORE_SLASH_RE = /^(.*)[\\\/]/;
+
 var describeComponentFrame = function (name, source, ownerName) {
-  return '\n    in ' + (name || 'Unknown') + (source ? ' (at ' + source.fileName.replace(/^.*[\\\/]/, '') + ':' + source.lineNumber + ')' : ownerName ? ' (created by ' + ownerName + ')' : '');
+  var sourceInfo = '';
+  if (source) {
+    var path = source.fileName;
+    var fileName = path.replace(BEFORE_SLASH_RE, '');
+    {
+      // In DEV, include code for a common special case:
+      // prefer "folder/index.js" instead of just "index.js".
+      if (/^index\./.test(fileName)) {
+        var match = path.match(BEFORE_SLASH_RE);
+        if (match) {
+          var pathBeforeSlash = match[1];
+          if (pathBeforeSlash) {
+            var folderName = pathBeforeSlash.replace(BEFORE_SLASH_RE, '');
+            fileName = folderName + '/' + fileName;
+          }
+        }
+      }
+    }
+    sourceInfo = ' (at ' + fileName + ':' + source.lineNumber + ')';
+  } else if (ownerName) {
+    sourceInfo = ' (created by ' + ownerName + ')';
+  }
+  return '\n    in ' + (name || 'Unknown') + sourceInfo;
 };
 
 /**
@@ -159,7 +183,10 @@ var warningWithoutStack = function () {};
     if (typeof console !== 'undefined') {
       var _console;
 
-      (_console = console).error.apply(_console, ['Warning: ' + format].concat(args));
+      var stringArgs = args.map(function (item) {
+        return '' + item;
+      });
+      (_console = console).error.apply(_console, ['Warning: ' + format].concat(stringArgs));
     }
     try {
       // --- Welcome to debugging React ---
@@ -175,6 +202,17 @@ var warningWithoutStack = function () {};
 }
 
 var warningWithoutStack$1 = warningWithoutStack;
+
+var Resolved = 1;
+
+
+function getResultFromResolvedThenable(thenable) {
+  return thenable._reactResult;
+}
+
+function refineResolvedThenable(thenable) {
+  return thenable._reactStatus === Resolved ? thenable._reactResult : null;
+}
 
 function getComponentName(type) {
   if (type == null) {
@@ -216,6 +254,14 @@ function getComponentName(type) {
         var renderFn = type.render;
         var functionName = renderFn.displayName || renderFn.name || '';
         return functionName !== '' ? 'ForwardRef(' + functionName + ')' : 'ForwardRef';
+    }
+    if (typeof type.then === 'function') {
+      var thenable = type;
+      var resolvedThenable = refineResolvedThenable(thenable);
+      if (resolvedThenable) {
+        var Component = getResultFromResolvedThenable(resolvedThenable);
+        return getComponentName(Component);
+      }
     }
   }
   return null;

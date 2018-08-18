@@ -62,7 +62,7 @@ function invariant(condition, format, a, b, c, d, e, f) {
 }
 
 // Relying on the `invariant()` implementation lets us
-// have preserve the format and params in the www builds.
+// preserve the format and params in the www builds.
 
 /**
  * Similar to invariant but only logs a warning if the condition is not met.
@@ -88,7 +88,10 @@ var warningWithoutStack = function () {};
     if (typeof console !== 'undefined') {
       var _console;
 
-      (_console = console).error.apply(_console, ['Warning: ' + format].concat(args));
+      var stringArgs = args.map(function (item) {
+        return '' + item;
+      });
+      (_console = console).error.apply(_console, ['Warning: ' + format].concat(stringArgs));
     }
     try {
       // --- Welcome to debugging React ---
@@ -133,11 +136,13 @@ var ReactSharedInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FI
 
 // Before we know whether it is functional or class
 var FunctionalComponent = 1;
-var ClassComponent = 2;
-var HostRoot = 3; // Root of a host tree. Could be nested inside another node.
+var FunctionalComponentLazy = 2;
+var ClassComponent = 3;
+var ClassComponentLazy = 4;
+var HostRoot = 5; // Root of a host tree. Could be nested inside another node.
  // A subtree. Could be an entry point to a different renderer.
-var HostComponent = 5;
-var HostText = 6;
+var HostComponent = 7;
+var HostText = 8;
 
 // Don't change these two values. They're used by React Dev Tools.
 var NoEffect = /*              */0;
@@ -746,6 +751,7 @@ var TOP_CONTEXT_MENU = unsafeCastStringToDOMTopLevelType('contextmenu');
 var TOP_COPY = unsafeCastStringToDOMTopLevelType('copy');
 var TOP_CUT = unsafeCastStringToDOMTopLevelType('cut');
 var TOP_DOUBLE_CLICK = unsafeCastStringToDOMTopLevelType('dblclick');
+
 var TOP_DRAG = unsafeCastStringToDOMTopLevelType('drag');
 var TOP_DRAG_END = unsafeCastStringToDOMTopLevelType('dragend');
 var TOP_DRAG_ENTER = unsafeCastStringToDOMTopLevelType('dragenter');
@@ -866,7 +872,7 @@ function findAllInRenderedFiberTreeInternal(fiber, test) {
   var node = currentParent;
   var ret = [];
   while (true) {
-    if (node.tag === HostComponent || node.tag === HostText || node.tag === ClassComponent || node.tag === FunctionalComponent) {
+    if (node.tag === HostComponent || node.tag === HostText || node.tag === ClassComponent || node.tag === ClassComponentLazy || node.tag === FunctionalComponent || node.tag === FunctionalComponentLazy) {
       var publicInst = node.stateNode;
       if (test(publicInst)) {
         ret.push(publicInst);
@@ -889,6 +895,29 @@ function findAllInRenderedFiberTreeInternal(fiber, test) {
     node.sibling.return = node.return;
     node = node.sibling;
   }
+}
+
+function validateClassInstance(inst, methodName) {
+  if (!inst) {
+    // This is probably too relaxed but it's existing behavior.
+    return;
+  }
+  if (get(inst)) {
+    // This is a public instance indeed.
+    return;
+  }
+  var received = void 0;
+  var stringified = '' + inst;
+  if (Array.isArray(inst)) {
+    received = 'an array';
+  } else if (inst && inst.nodeType === 1 && inst.tagName) {
+    received = 'a DOM node';
+  } else if (stringified === '[object Object]') {
+    received = 'object with keys {' + Object.keys(inst).join(', ') + '}';
+  } else {
+    received = stringified;
+  }
+  invariant(false, '%s(...): the first argument must be a React class instance. Instead received: %s.', methodName, received);
 }
 
 /**
@@ -946,10 +975,10 @@ var ReactTestUtils = {
   },
 
   findAllInRenderedTree: function (inst, test) {
+    validateClassInstance(inst, 'findAllInRenderedTree');
     if (!inst) {
       return [];
     }
-    !ReactTestUtils.isCompositeComponent(inst) ? invariant(false, 'findAllInRenderedTree(...): instance must be a composite component') : void 0;
     var internalInstance = get(inst);
     return findAllInRenderedFiberTreeInternal(internalInstance, test);
   },
@@ -960,6 +989,7 @@ var ReactTestUtils = {
    * @return {array} an array of all the matches.
    */
   scryRenderedDOMComponentsWithClass: function (root, classNames) {
+    validateClassInstance(root, 'scryRenderedDOMComponentsWithClass');
     return ReactTestUtils.findAllInRenderedTree(root, function (inst) {
       if (ReactTestUtils.isDOMComponent(inst)) {
         var className = inst.className;
@@ -988,6 +1018,7 @@ var ReactTestUtils = {
    * @return {!ReactDOMComponent} The one match.
    */
   findRenderedDOMComponentWithClass: function (root, className) {
+    validateClassInstance(root, 'findRenderedDOMComponentWithClass');
     var all = ReactTestUtils.scryRenderedDOMComponentsWithClass(root, className);
     if (all.length !== 1) {
       throw new Error('Did not find exactly one match (found: ' + all.length + ') ' + 'for class:' + className);
@@ -1001,6 +1032,7 @@ var ReactTestUtils = {
    * @return {array} an array of all the matches.
    */
   scryRenderedDOMComponentsWithTag: function (root, tagName) {
+    validateClassInstance(root, 'scryRenderedDOMComponentsWithTag');
     return ReactTestUtils.findAllInRenderedTree(root, function (inst) {
       return ReactTestUtils.isDOMComponent(inst) && inst.tagName.toUpperCase() === tagName.toUpperCase();
     });
@@ -1013,6 +1045,7 @@ var ReactTestUtils = {
    * @return {!ReactDOMComponent} The one match.
    */
   findRenderedDOMComponentWithTag: function (root, tagName) {
+    validateClassInstance(root, 'findRenderedDOMComponentWithTag');
     var all = ReactTestUtils.scryRenderedDOMComponentsWithTag(root, tagName);
     if (all.length !== 1) {
       throw new Error('Did not find exactly one match (found: ' + all.length + ') ' + 'for tag:' + tagName);
@@ -1025,6 +1058,7 @@ var ReactTestUtils = {
    * @return {array} an array of all the matches.
    */
   scryRenderedComponentsWithType: function (root, componentType) {
+    validateClassInstance(root, 'scryRenderedComponentsWithType');
     return ReactTestUtils.findAllInRenderedTree(root, function (inst) {
       return ReactTestUtils.isCompositeComponentWithType(inst, componentType);
     });
@@ -1037,6 +1071,7 @@ var ReactTestUtils = {
    * @return {!ReactComponent} The one match.
    */
   findRenderedComponentWithType: function (root, componentType) {
+    validateClassInstance(root, 'findRenderedComponentWithType');
     var all = ReactTestUtils.scryRenderedComponentsWithType(root, componentType);
     if (all.length !== 1) {
       throw new Error('Did not find exactly one match (found: ' + all.length + ') ' + 'for componentType:' + componentType);
