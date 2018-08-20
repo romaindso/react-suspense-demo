@@ -1,19 +1,6 @@
-import React, { Component, Fragment, Placeholder } from 'react';
-import { createCache, createResource } from 'simple-cache-provider';
+import React, { Component, Fragment, Placeholder, lazy } from 'react';
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const cache = createCache();
-
-// Lazy load!
-const getComponent = createResource(
-  () => sleep(1000).then(() => import('./BigComponent').then(mod => mod.default)),
-  cmp => cmp
-);
-
-const BigComponent = props => {
-  const Comp = getComponent.read(cache, props);
-  return <Comp {...props} />;
-};
+const BigComponent = lazy(() => import('./BigComponent'));
 
 export default class App extends Component {
 
@@ -21,7 +8,7 @@ export default class App extends Component {
     return (
       <Fragment>
         <h1>Suspense</h1>
-        <Placeholder delayMs={2000} fallback={<div>🌀 'Loading....'</div>}>
+        <Placeholder delayMs={500} fallback={<div>🌀 'Loading....'</div>}>
           <BigComponent />
         </Placeholder>
       </Fragment>
