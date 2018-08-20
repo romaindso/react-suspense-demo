@@ -100,7 +100,7 @@ function invariant(condition, format, a, b, c, d, e, f) {
 // render phase
 
 // Suspense
-var enableSuspense = false;
+var enableSuspense = true;
 // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
 
 
@@ -569,9 +569,7 @@ var describeComponentFrame = function (name, source, ownerName) {
 var Resolved = 1;
 
 
-function getResultFromResolvedThenable(thenable) {
-  return thenable._reactResult;
-}
+
 
 function refineResolvedThenable(thenable) {
   return thenable._reactStatus === Resolved ? thenable._reactResult : null;
@@ -622,8 +620,7 @@ function getComponentName(type) {
       var thenable = type;
       var resolvedThenable = refineResolvedThenable(thenable);
       if (resolvedThenable) {
-        var Component = getResultFromResolvedThenable(resolvedThenable);
-        return getComponentName(Component);
+        return getComponentName(resolvedThenable);
       }
     }
   }
@@ -1863,7 +1860,7 @@ var React$3 = ( React$2 && React ) || React$2;
 
 // TODO: decide on the top-level export form.
 // This is hacky but makes it work with both Rollup and Jest.
-var react = React$3.default ? React$3.default : React$3;
+var react = React$3.default || React$3;
 
 return react;
 

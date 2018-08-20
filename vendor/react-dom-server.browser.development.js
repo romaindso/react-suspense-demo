@@ -130,9 +130,7 @@ var REACT_PLACEHOLDER_TYPE = hasSymbol ? Symbol.for('react.placeholder') : 0xead
 var Resolved = 1;
 
 
-function getResultFromResolvedThenable(thenable) {
-  return thenable._reactResult;
-}
+
 
 function refineResolvedThenable(thenable) {
   return thenable._reactStatus === Resolved ? thenable._reactResult : null;
@@ -183,8 +181,7 @@ function getComponentName(type) {
       var thenable = type;
       var resolvedThenable = refineResolvedThenable(thenable);
       if (resolvedThenable) {
-        var Component = getResultFromResolvedThenable(resolvedThenable);
-        return getComponentName(Component);
+        return getComponentName(resolvedThenable);
       }
     }
   }
@@ -3144,7 +3141,7 @@ var ReactDOMServer = ( ReactDOMServerBrowser$1 && ReactDOMServerBrowser ) || Rea
 
 // TODO: decide on the top-level export form.
 // This is hacky but makes it work with both Rollup and Jest
-var server_browser = ReactDOMServer.default ? ReactDOMServer.default : ReactDOMServer;
+var server_browser = ReactDOMServer.default || ReactDOMServer;
 
 return server_browser;
 

@@ -223,19 +223,18 @@ function getComponentName(type) {
       var thenable = type;
       var resolvedThenable = refineResolvedThenable(thenable);
       if (resolvedThenable) {
-        var Component = getResultFromResolvedThenable(resolvedThenable);
-        return getComponentName(Component);
+        return getComponentName(resolvedThenable);
       }
     }
   }
   return null;
 }
 
-var IndeterminateComponent = 0; // Before we know whether it is functional or class
-var FunctionalComponent = 1;
-var FunctionalComponentLazy = 2;
-var ClassComponent = 3;
-var ClassComponentLazy = 4;
+var FunctionalComponent = 0;
+var FunctionalComponentLazy = 1;
+var ClassComponent = 2;
+var ClassComponentLazy = 3;
+var IndeterminateComponent = 4; // Before we know whether it is functional or class
 var HostRoot = 5; // Root of a host tree. Could be nested inside another node.
 var HostPortal = 6; // A subtree. Could be an entry point to a different renderer.
 var HostComponent = 7;
@@ -1474,11 +1473,10 @@ var didPerformWorkStackCursor = createCursor(false);
 // pushed the next context provider, and now need to merge their contexts.
 var previousContext = emptyContextObject;
 
-function getUnmaskedContext(workInProgress, Component) {
-  var hasOwnContext = isContextProvider(Component);
-  if (hasOwnContext) {
+function getUnmaskedContext(workInProgress, Component, didPushOwnContextIfProvider) {
+  if (didPushOwnContextIfProvider && isContextProvider(Component)) {
     // If the fiber is a context provider itself, when we read its context
-    // we have already pushed its own child context on the stack. A context
+    // we may have already pushed its own child context on the stack. A context
     // provider should not "see" its own child context. Therefore we read the
     // previous (parent) context instead for a context provider.
     return previousContext;
@@ -4080,7 +4078,7 @@ function adoptClassInstance(workInProgress, instance) {
 }
 
 function constructClassInstance(workInProgress, ctor, props, renderExpirationTime) {
-  var unmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var unmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var contextTypes = ctor.contextTypes;
   var isContextConsumer = contextTypes !== null && contextTypes !== undefined;
   var context = isContextConsumer ? getMaskedContext(workInProgress, unmaskedContext) : emptyContextObject;
@@ -4198,7 +4196,7 @@ function mountClassInstance(workInProgress, ctor, newProps, renderExpirationTime
   }
 
   var instance = workInProgress.stateNode;
-  var unmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var unmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
 
   instance.props = newProps;
   instance.state = workInProgress.memoizedState;
@@ -4254,7 +4252,7 @@ function resumeMountClassInstance(workInProgress, ctor, newProps, renderExpirati
   instance.props = oldProps;
 
   var oldContext = instance.context;
-  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var nextLegacyContext = getMaskedContext(workInProgress, nextLegacyUnmaskedContext);
 
   var getDerivedStateFromProps = ctor.getDerivedStateFromProps;
@@ -4343,7 +4341,7 @@ function updateClassInstance(current, workInProgress, ctor, newProps, renderExpi
   instance.props = oldProps;
 
   var oldContext = instance.context;
-  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var nextLegacyContext = getMaskedContext(workInProgress, nextLegacyUnmaskedContext);
 
   var getDerivedStateFromProps = ctor.getDerivedStateFromProps;
@@ -5663,7 +5661,7 @@ function readLazyComponentType(thenable) {
               // of an async import() and use that. Otherwise, use the
               // resolved value itself.
               var defaultExport = resolvedValue.default;
-              resolvedValue = typeof defaultExport !== undefined && defaultExport !== null ? defaultExport : resolvedValue;
+              resolvedValue = defaultExport !== undefined && defaultExport !== null ? defaultExport : resolvedValue;
             } else {
               resolvedValue = resolvedValue;
             }
@@ -5770,7 +5768,7 @@ function markRef(current$$1, workInProgress) {
 }
 
 function updateFunctionalComponent(current$$1, workInProgress, Component, nextProps, renderExpirationTime) {
-  var unmaskedContext = getUnmaskedContext(workInProgress, Component);
+  var unmaskedContext = getUnmaskedContext(workInProgress, Component, true);
   var context = getMaskedContext(workInProgress, unmaskedContext);
 
   var nextChildren = void 0;
@@ -6038,7 +6036,7 @@ function mountIndeterminateComponent(current$$1, workInProgress, Component, rend
     }
   }
 
-  var unmaskedContext = getUnmaskedContext(workInProgress, Component);
+  var unmaskedContext = getUnmaskedContext(workInProgress, Component, false);
   var context = getMaskedContext(workInProgress, unmaskedContext);
 
   prepareToReadContext(workInProgress, renderExpirationTime);
@@ -10299,7 +10297,7 @@ var ReactTestRenderer$1 = ( ReactTestRenderer && ReactTestRendererFiber ) || Rea
 
 // TODO: decide on the top-level export form.
 // This is hacky but makes it work with both Rollup and Jest.
-var reactTestRenderer = ReactTestRenderer$1.default ? ReactTestRenderer$1.default : ReactTestRenderer$1;
+var reactTestRenderer = ReactTestRenderer$1.default || ReactTestRenderer$1;
 
 return reactTestRenderer;
 

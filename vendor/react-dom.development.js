@@ -830,11 +830,11 @@ var EventPluginHub = Object.freeze({
 	runExtractedEventsInBatch: runExtractedEventsInBatch
 });
 
-var IndeterminateComponent = 0; // Before we know whether it is functional or class
-var FunctionalComponent = 1;
-var FunctionalComponentLazy = 2;
-var ClassComponent = 3;
-var ClassComponentLazy = 4;
+var FunctionalComponent = 0;
+var FunctionalComponentLazy = 1;
+var ClassComponent = 2;
+var ClassComponentLazy = 3;
+var IndeterminateComponent = 4; // Before we know whether it is functional or class
 var HostRoot = 5; // Root of a host tree. Could be nested inside another node.
 var HostPortal = 6; // A subtree. Could be an entry point to a different renderer.
 var HostComponent = 7;
@@ -1369,23 +1369,6 @@ function getRawEventName(topLevelType) {
   return unsafeCastDOMTopLevelTypeToString(topLevelType);
 }
 
-var contentKey = null;
-
-/**
- * Gets the key used to access text content on a DOM node.
- *
- * @return {?string} Key used to access text content.
- * @internal
- */
-function getTextContentAccessor() {
-  if (!contentKey && canUseDOM) {
-    // Prefer textContent to innerText because many browsers support both but
-    // SVG <text> elements don't support innerText even when <div> does.
-    contentKey = 'textContent' in document.documentElement ? 'textContent' : 'innerText';
-  }
-  return contentKey;
-}
-
 /**
  * These variables store information about text content of a target node,
  * allowing comparison of content before and after a given event.
@@ -1448,7 +1431,7 @@ function getText() {
   if ('value' in root) {
     return root.value;
   }
-  return root[getTextContentAccessor()];
+  return root.textContent;
 }
 
 var ReactInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
@@ -2317,13 +2300,12 @@ function getEventTarget(nativeEvent) {
  * Borrows from Modernizr.
  *
  * @param {string} eventNameSuffix Event name, e.g. "click".
- * @param {?boolean} capture Check if the capture phase is supported.
  * @return {boolean} True if the event is supported.
  * @internal
  * @license Modernizr 3.0.0pre (Custom Build) | MIT
  */
-function isEventSupported(eventNameSuffix, capture) {
-  if (!canUseDOM || capture && !('addEventListener' in document)) {
+function isEventSupported(eventNameSuffix) {
+  if (!canUseDOM) {
     return false;
   }
 
@@ -2563,8 +2545,7 @@ function getComponentName(type) {
       var thenable = type;
       var resolvedThenable = refineResolvedThenable(thenable);
       if (resolvedThenable) {
-        var Component = getResultFromResolvedThenable(resolvedThenable);
-        return getComponentName(Component);
+        return getComponentName(resolvedThenable);
       }
     }
   }
@@ -5064,7 +5045,7 @@ function listenTo(registrationName, mountAt) {
           break;
         case TOP_CANCEL:
         case TOP_CLOSE:
-          if (isEventSupported(getRawEventName(dependency), true)) {
+          if (isEventSupported(getRawEventName(dependency))) {
             trapCapturedEvent(dependency, mountAt);
           }
           break;
@@ -5302,7 +5283,7 @@ function setOffsets(node, offsets) {
   var doc = node.ownerDocument || document;
   var win = doc ? doc.defaultView : window;
   var selection = win.getSelection();
-  var length = node[getTextContentAccessor()].length;
+  var length = node.textContent.length;
   var start = Math.min(offsets.start, length);
   var end = offsets.end === undefined ? start : Math.min(offsets.end, length);
 
@@ -9236,7 +9217,7 @@ var enableUserTimingAPI = true;
 // render phase
 var enableGetDerivedStateFromCatch = false;
 // Suspense
-var enableSuspense = false;
+var enableSuspense = true;
 // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
 var debugRenderPhaseSideEffects = false;
 
@@ -9776,11 +9757,10 @@ var didPerformWorkStackCursor = createCursor(false);
 // pushed the next context provider, and now need to merge their contexts.
 var previousContext = emptyContextObject;
 
-function getUnmaskedContext(workInProgress, Component) {
-  var hasOwnContext = isContextProvider(Component);
-  if (hasOwnContext) {
+function getUnmaskedContext(workInProgress, Component, didPushOwnContextIfProvider) {
+  if (didPushOwnContextIfProvider && isContextProvider(Component)) {
     // If the fiber is a context provider itself, when we read its context
-    // we have already pushed its own child context on the stack. A context
+    // we may have already pushed its own child context on the stack. A context
     // provider should not "see" its own child context. Therefore we read the
     // previous (parent) context instead for a context provider.
     return previousContext;
@@ -12093,7 +12073,7 @@ function adoptClassInstance(workInProgress, instance) {
 }
 
 function constructClassInstance(workInProgress, ctor, props, renderExpirationTime) {
-  var unmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var unmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var contextTypes = ctor.contextTypes;
   var isContextConsumer = contextTypes !== null && contextTypes !== undefined;
   var context = isContextConsumer ? getMaskedContext(workInProgress, unmaskedContext) : emptyContextObject;
@@ -12211,7 +12191,7 @@ function mountClassInstance(workInProgress, ctor, newProps, renderExpirationTime
   }
 
   var instance = workInProgress.stateNode;
-  var unmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var unmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
 
   instance.props = newProps;
   instance.state = workInProgress.memoizedState;
@@ -12267,7 +12247,7 @@ function resumeMountClassInstance(workInProgress, ctor, newProps, renderExpirati
   instance.props = oldProps;
 
   var oldContext = instance.context;
-  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var nextLegacyContext = getMaskedContext(workInProgress, nextLegacyUnmaskedContext);
 
   var getDerivedStateFromProps = ctor.getDerivedStateFromProps;
@@ -12356,7 +12336,7 @@ function updateClassInstance(current, workInProgress, ctor, newProps, renderExpi
   instance.props = oldProps;
 
   var oldContext = instance.context;
-  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor);
+  var nextLegacyUnmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
   var nextLegacyContext = getMaskedContext(workInProgress, nextLegacyUnmaskedContext);
 
   var getDerivedStateFromProps = ctor.getDerivedStateFromProps;
@@ -13676,7 +13656,7 @@ function readLazyComponentType(thenable) {
               // of an async import() and use that. Otherwise, use the
               // resolved value itself.
               var defaultExport = resolvedValue.default;
-              resolvedValue = typeof defaultExport !== undefined && defaultExport !== null ? defaultExport : resolvedValue;
+              resolvedValue = defaultExport !== undefined && defaultExport !== null ? defaultExport : resolvedValue;
             } else {
               resolvedValue = resolvedValue;
             }
@@ -13783,7 +13763,7 @@ function markRef(current$$1, workInProgress) {
 }
 
 function updateFunctionalComponent(current$$1, workInProgress, Component, nextProps, renderExpirationTime) {
-  var unmaskedContext = getUnmaskedContext(workInProgress, Component);
+  var unmaskedContext = getUnmaskedContext(workInProgress, Component, true);
   var context = getMaskedContext(workInProgress, unmaskedContext);
 
   var nextChildren = void 0;
@@ -14051,7 +14031,7 @@ function mountIndeterminateComponent(current$$1, workInProgress, Component, rend
     }
   }
 
-  var unmaskedContext = getUnmaskedContext(workInProgress, Component);
+  var unmaskedContext = getUnmaskedContext(workInProgress, Component, false);
   var context = getMaskedContext(workInProgress, unmaskedContext);
 
   prepareToReadContext(workInProgress, renderExpirationTime);
@@ -18368,7 +18348,7 @@ var ReactDOM$3 = ( ReactDOM$2 && ReactDOM ) || ReactDOM$2;
 
 // TODO: decide on the top-level export form.
 // This is hacky but makes it work with both Rollup and Jest.
-var reactDom = ReactDOM$3.default ? ReactDOM$3.default : ReactDOM$3;
+var reactDom = ReactDOM$3.default || ReactDOM$3;
 
 return reactDom;
 

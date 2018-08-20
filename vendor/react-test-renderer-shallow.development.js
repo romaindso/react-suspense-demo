@@ -206,9 +206,7 @@ var warningWithoutStack$1 = warningWithoutStack;
 var Resolved = 1;
 
 
-function getResultFromResolvedThenable(thenable) {
-  return thenable._reactResult;
-}
+
 
 function refineResolvedThenable(thenable) {
   return thenable._reactStatus === Resolved ? thenable._reactResult : null;
@@ -259,8 +257,7 @@ function getComponentName(type) {
       var thenable = type;
       var resolvedThenable = refineResolvedThenable(thenable);
       if (resolvedThenable) {
-        var Component = getResultFromResolvedThenable(resolvedThenable);
-        return getComponentName(Component);
+        return getComponentName(resolvedThenable);
       }
     }
   }
@@ -745,7 +742,7 @@ var ReactShallowRenderer$3 = ( ReactShallowRenderer$2 && ReactShallowRenderer ) 
 
 // TODO: decide on the top-level export form.
 // This is hacky but makes it work with both Rollup and Jest.
-var shallow = ReactShallowRenderer$3.default ? ReactShallowRenderer$3.default : ReactShallowRenderer$3;
+var shallow = ReactShallowRenderer$3.default || ReactShallowRenderer$3;
 
 return shallow;
 
