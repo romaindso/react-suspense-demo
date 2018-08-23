@@ -1,14 +1,20 @@
-import React, { Component } from 'react';
+import React from "react";
+import Image from "./Image";
 
-export default class ImageList extends Component {
-  render() {
-    console.log(this.props.images);
+const ImageList = ({ images }) => {
+  return (
+    <div>
+      {images.map(image => {
+        return (
+          <Image
+            style={{ height: 200 }}
+            key={image.id}
+            src={image.images.original.url}
+          />
+        );
+      })}
+    </div>
+  );
+};
 
-    return (
-      <div>
-        {this.props.images.map(img => {
-          return <img style={{ height: 200 }} key={img.id} src={img.images.original.url} />
-        })}
-      </div>)
-  }
-}
+export default ImageList;
