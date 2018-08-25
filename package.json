@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "babel-cli": "^6.26.0",
-    "simple-cache-provider": "^0.7.0"
+    "babel-plugin-styled-components": "^1.5.1",
+    "simple-cache-provider": "^0.7.0",
+    "styled-components": "^3.4.5"
   },
   "alias": {
     "react": "./vendor/react.development.js",

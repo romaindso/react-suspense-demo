@@ -1,10 +1,12 @@
 import React, { Component, Fragment, Placeholder } from 'react';
 import { createResource } from 'simple-cache-provider';
 import { withCache } from '../withCache';
+import { Container, Title } from './ui';
 import TodoList from './TodoList';
+import Loader from './Loader';
 import todos from './todos-data.js';
+import './index.css';
 
-// Create our resource
 const getTodos = createResource(
   () =>
     new Promise(resolve => {
@@ -14,22 +16,19 @@ const getTodos = createResource(
     })
 );
 
-// Create our  component
 const Todos = withCache(props => {
   const data = getTodos.read(props.cache);
   return <TodoList todos={data} />;
 });
 
-export default class App extends Component {
+const App = () => (
+  <Container>
+    <Title>Todo List</Title>
+    <Placeholder delayMs={500} fallback={<Loader />}>
+      <Todos />
+    </Placeholder>
+  </Container>
+);
 
-  render() {
-    return (
-      <Fragment>
-        <h1>Suspense</h1>
-        <Placeholder delayMs={2000} fallback={<div>🌀 'Loading....'</div>}>
-          <Todos />
-        </Placeholder>
-      </Fragment>
-    );
-  }
-}
+export default App;
+

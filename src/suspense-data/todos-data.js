@@ -9,7 +9,7 @@ export default [
   },
   {
     id: 3,
-    text: 'Start a new life in Montréal',
+    text: 'Start a new life in Montréal 🇨🇦',
   },
   {
     id: 4,
@@ -17,6 +17,6 @@ export default [
   },
   {
     id: 5,
-    text: '',
+    text: 'Get more followers than my girlfriend 🙃',
   },
 ];
