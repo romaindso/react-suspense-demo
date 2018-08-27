@@ -1,6 +1,6 @@
 import React from "react";
 import { createResource } from "simple-cache-provider";
-import { withCache } from "../withCache";
+import { withCache } from "../common/withCache";
 
 function loadImage(src) {
   const image = new Image();
@@ -13,7 +13,8 @@ function loadImage(src) {
 const { read } = createResource(loadImage);
 
 const Img = props => {
-  return <img alt="trump" src={read(props.cache, props.src)} />;
+  return <img alt="pokemon" src={read(props.cache, props.src)} />;
+  // return <img alt="pokemon" src={props.src} />;
 };
 
 export default withCache(Img);
