@@ -1,9 +1,5 @@
 {
-  "presets": [
-    "env",
-    "stage-0",
-    "react"
-  ],
+  "presets": ["env", "stage-0", "react"],
   "plugins": [
     [
       "transform-runtime",
@@ -12,6 +8,7 @@
         "regenerator": true
       }
     ],
+    "transform-class-properties",
     "styled-components"
   ]
 }
