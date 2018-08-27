@@ -1,11 +1,12 @@
-import React, { Component, Fragment, Placeholder } from 'react';
-import { createResource } from 'simple-cache-provider';
-import { withCache } from '../withCache';
-import { Container, Title } from './ui';
-import TodoList from './TodoList';
-import Loader from './Loader';
-import todos from './todos-data.js';
-import './index.css';
+import React, { Placeholder } from "react";
+import { createResource } from "simple-cache-provider";
+import { withCache } from "../common/withCache";
+import { Container, Title } from "../common/ui";
+import TodoList from "./TodoList";
+import Loader from "../common/Loader";
+import todos from "./todos-data.js";
+import chocolatine from "../assets/chocolatine.gif";
+import "./index.css";
 
 const getTodos = createResource(
   () =>
@@ -24,11 +25,10 @@ const Todos = withCache(props => {
 const App = () => (
   <Container>
     <Title>Todo List</Title>
-    <Placeholder delayMs={500} fallback={<Loader />}>
+    <Placeholder delayMs={500} fallback={<Loader type={chocolatine} />}>
       <Todos />
     </Placeholder>
   </Container>
 );
 
 export default App;
-
