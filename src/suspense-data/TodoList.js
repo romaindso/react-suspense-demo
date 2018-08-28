@@ -1,5 +1,5 @@
 import React from "react";
-import { Todos, Todo } from "../common/ui";
+import { Todos, Todo } from "./ui";
 
 const TodoList = ({ todos }) => {
   return (
