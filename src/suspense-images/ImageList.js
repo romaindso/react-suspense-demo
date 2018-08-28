@@ -1,14 +1,13 @@
 import React from "react";
 import Image from "./Image";
+import { PokemonsWrapper } from "./ui";
 
-const ImageList = ({ images }) => {
-  return (
-    <div>
-      {images.map((image, index) => {
-        return <Image key={index} src={image} />;
-      })}
-    </div>
-  );
-};
+const ImageList = ({ pokemons }) => (
+  <PokemonsWrapper>
+    {pokemons.map(pokemon => {
+      return <Image key={pokemon.id} pokemon={pokemon} />;
+    })}
+  </PokemonsWrapper>
+);
 
 export default ImageList;
