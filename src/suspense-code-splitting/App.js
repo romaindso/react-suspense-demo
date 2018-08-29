@@ -1,16 +1,29 @@
-import React, { Component, Fragment, Placeholder, lazy } from "react";
+import React, { Component, Placeholder, lazy } from "react";
+import { Container, Title } from "./ui";
+import Loader from "../common/Loader";
+import rocket from "../assets/rocket.gif";
 
-const BigComponent = lazy(() => import("./BigComponent"));
+const BigComponent = lazy(
+  () =>
+    new Promise(resolve =>
+      setTimeout(() => {
+        return resolve(import("./BigComponent"));
+      }, 2500)
+    )
+);
 
 export default class App extends Component {
   render() {
     return (
-      <Fragment>
-        <h1>Suspense</h1>
-        <Placeholder delayMs={500} fallback={<div>🌀 'Loading....'</div>}>
+      <Container>
+        <Title primary>Lazyyyyyyy loading</Title>
+        <Placeholder
+          delayMs={1000}
+          fallback={<Loader type={rocket} height="256px" />}
+        >
           <BigComponent />
         </Placeholder>
-      </Fragment>
+      </Container>
     );
   }
 }

@@ -1,7 +1,10 @@
 import React from "react";
+import { Wrapper, Title } from "./ui";
 
 const BigComponent = () => (
-  <div>BigComponent loaded !</div>
+  <Wrapper>
+    <Title>BigComponent loaded !</Title>
+  </Wrapper>
 );
 
 export default BigComponent;
