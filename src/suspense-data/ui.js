@@ -27,12 +27,3 @@ export const Todos = styled.ul`
   margin: 0;
   padding: 0px;
 `;
-
-export const Center = styled.div`
-  text-align: center;
-  display: flex;
-  flex: 1;
-  min-height: 300px;
-  align-items: center;
-  justify-content: center;
-`;

@@ -3,6 +3,9 @@ import styled from "styled-components";
 export const Container = styled.div`
   margin: auto;
   font-family: Tahoma, cursive;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 `;
 
 export const Title = styled.div`
@@ -46,13 +49,4 @@ export const Name = styled.h1`
   margin: 0;
   text-align: center;
   text-transform: capitalize;
-`;
-
-export const Center = styled.div`
-  text-align: center;
-  display: flex;
-  flex: 1;
-  min-height: 300px;
-  align-items: center;
-  justify-content: center;
 `;

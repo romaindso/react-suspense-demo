@@ -1,7 +1,7 @@
 import React, { Placeholder } from "react";
 import { createResource } from "simple-cache-provider";
 import { withCache } from "../common/withCache";
-import { Container2, Title } from "./ui";
+import { Container, Title } from "./ui";
 import TodoList from "./TodoList";
 import Loader from "../common/Loader";
 import todos from "./todos-data.js";
@@ -22,12 +22,12 @@ const Todos = withCache(props => {
 });
 
 const App = () => (
-  <Container2>
+  <Container>
     <Title>Todo List</Title>
     <Placeholder delayMs={500} fallback={<Loader type={chocolatine} />}>
       <Todos />
     </Placeholder>
-  </Container2>
+  </Container>
 );
 
 export default App;
