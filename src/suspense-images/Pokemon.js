@@ -16,8 +16,8 @@ const { read } = createResource(loadImage);
 const Pokemon = props => (
   <PokemonWrapper>
     <ImageWrapper>
-      {/* <img alt="pokemon" src={props.pokemon.src} /> */}
-      <img alt="pokemon" src={read(props.cache, props.pokemon.src)} />
+      <img alt="pokemon" src={props.pokemon.src} />
+      {/* <img alt="pokemon" src={read(props.cache, props.pokemon.src)} /> */}
     </ImageWrapper>
     <Name>{props.pokemon.name}</Name>
   </PokemonWrapper>

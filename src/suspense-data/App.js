@@ -12,7 +12,7 @@ const getTodos = createResource(
     new Promise(resolve => {
       setTimeout(() => {
         resolve(todos);
-      }, 3000);
+      }, 2000);
     })
 );
 

@@ -8,43 +8,43 @@ import Loader from "../common/Loader";
 import pikachu from "../assets/pikachu.gif";
 
 // Create our resource
-const getPokemons = createResource(() => {
-  return new Promise(async resolve => {
-    const pokemonList = await getPokemonList();
-    const pokemonListFull = await getPokemonListFull(pokemonList);
-    resolve(pokemonListFull);
-  });
-});
+// const getPokemons = createResource(() => {
+//   return new Promise(async resolve => {
+//     const pokemonList = await getPokemonList();
+//     const pokemonListFull = await getPokemonListFull(pokemonList);
+//     resolve(pokemonListFull);
+//   });
+// });
 
 // Create our component
-const Pokemons = withCache(props => (
-  <PokemonList pokemons={getPokemons.read(props.cache)} />
-));
+// const Pokemons = withCache(props => (
+//   <PokemonList pokemons={getPokemons.read(props.cache)} />
+// ));
 
 export default class App extends Component {
-  // state = {
-  //   pokemons: [],
-  //   isLoaded: false
-  // };
+  state = {
+    pokemons: [],
+    isLoaded: false
+  };
 
-  // async componentDidMount() {
-  //   const pokemonList = await getPokemonList();
-  //   const pokemonListFull = await getPokemonListFull(pokemonList);
-  //   this.setState({ pokemons: pokemonListFull, isLoaded: true });
-  // }
+  async componentDidMount() {
+    const pokemonList = await getPokemonList();
+    const pokemonListFull = await getPokemonListFull(pokemonList);
+    this.setState({ pokemons: pokemonListFull, isLoaded: true });
+  }
 
   render() {
     return (
       <Container>
         <Title>Pokémon I never caught...</Title>
-        {/* {this.state.isLoaded ? (
+        {this.state.isLoaded ? (
           <PokemonList pokemons={this.state.pokemons} />
         ) : (
-          <Loader type={pikachu} />
-        )} */}
-        <Placeholder delayMs={1000} fallback={<Loader type={pikachu} />}>
+            <Loader type={pikachu} />
+          )}
+        {/* <Placeholder delayMs={1000} fallback={<Loader type={pikachu} />}>
           <Pokemons />
-        </Placeholder>
+        </Placeholder> */}
       </Container>
     );
   }
