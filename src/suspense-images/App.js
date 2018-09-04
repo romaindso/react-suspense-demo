@@ -7,7 +7,6 @@ import PokemonList from "./PokemonList";
 import Loader from "../common/Loader";
 import pikachu from "../assets/pikachu.gif";
 
-// Create our resource
 // const getPokemons = createResource(() => {
 //   return new Promise(async resolve => {
 //     const pokemonList = await getPokemonList();
@@ -16,7 +15,6 @@ import pikachu from "../assets/pikachu.gif";
 //   });
 // });
 
-// Create our component
 // const Pokemons = withCache(props => (
 //   <PokemonList pokemons={getPokemons.read(props.cache)} />
 // ));
