@@ -24,6 +24,7 @@
     "react-dom": "./vendor/react-dom.development.js"
   },
   "scripts": {
-    "start": "parcel src/index.html --no-hmr"
+    "start": "parcel src/index.html --no-hmr",
+    "deploy": "git push origin :gh-pages && git subtree push --prefix dist origin gh-pages"
   }
 }
