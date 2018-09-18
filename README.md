@@ -6,7 +6,7 @@
 
 https://romaindso.github.io/react-suspense-demo/
 
-3 mini app to experiments with **React Suspense**
+3 mini apps to experiments with **React Suspense**
 
 - Todolist
 - Pokédex (with images)
