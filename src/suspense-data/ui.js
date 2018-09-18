@@ -3,7 +3,7 @@ import styled from "styled-components";
 export const Container = styled.div`
   background: white;
   max-width: 500px;
-  margin: auto;
+  margin: 50px auto;
 `;
 
 export const Title = styled.div`

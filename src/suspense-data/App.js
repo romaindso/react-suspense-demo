@@ -24,7 +24,7 @@ const Todos = withCache(props => {
 const App = () => (
   <Container>
     <Title>Todo List</Title>
-    <Placeholder delayMs={1000} fallback={<Loader type={chocolatine} />}>
+    <Placeholder delayMs={500} fallback={<Loader type={chocolatine} />}>
       <Todos />
     </Placeholder>
   </Container>

@@ -7,42 +7,42 @@ import PokemonList from "./PokemonList";
 import Loader from "../common/Loader";
 import pikachu from "../assets/pikachu.gif";
 
-// const getPokemons = createResource(() => {
-//   return new Promise(async resolve => {
-//     const pokemonList = await getPokemonList();
-//     const pokemonListFull = await getPokemonListFull(pokemonList);
-//     resolve(pokemonListFull);
-//   });
-// });
-
-// const Pokemons = withCache(props => (
-//   <PokemonList pokemons={getPokemons.read(props.cache)} />
-// ));
-
-export default class App extends Component {
-  state = {
-    pokemons: [],
-    isLoaded: false
-  };
-
-  async componentDidMount() {
+const getPokemons = createResource(() => {
+  return new Promise(async resolve => {
     const pokemonList = await getPokemonList();
     const pokemonListFull = await getPokemonListFull(pokemonList);
-    this.setState({ pokemons: pokemonListFull, isLoaded: true });
-  }
+    resolve(pokemonListFull);
+  });
+});
+
+const Pokemons = withCache(props => (
+  <PokemonList pokemons={getPokemons.read(props.cache)} />
+));
+
+export default class App extends Component {
+  // state = {
+  //   pokemons: [],
+  //   isLoaded: false
+  // };
+
+  // async componentDidMount() {
+  //   const pokemonList = await getPokemonList();
+  //   const pokemonListFull = await getPokemonListFull(pokemonList);
+  //   this.setState({ pokemons: pokemonListFull, isLoaded: true });
+  // }
 
   render() {
     return (
       <Container>
         <Title>Pokémon I never caught...</Title>
-        {this.state.isLoaded ? (
+        {/* {this.state.isLoaded ? (
           <PokemonList pokemons={this.state.pokemons} />
         ) : (
             <Loader type={pikachu} />
-          )}
-        {/* <Placeholder delayMs={1000} fallback={<Loader type={pikachu} />}>
+          )} */}
+        <Placeholder delayMs={1000} fallback={<Loader type={pikachu} />}>
           <Pokemons />
-        </Placeholder> */}
+        </Placeholder>
       </Container>
     );
   }
