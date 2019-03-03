@@ -1,7 +1,7 @@
-/** @license React v16.4.1
+/** @license React v16.6.1
  * react-dom-unstable-native-dependencies.development.js
  *
- * Copyright (c) 2013-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -68,7 +68,7 @@ function invariant(condition, format, a, b, c, d, e, f) {
   // invokeGuardedCallback uses a try-catch, all user exceptions are treated
   // like caught exceptions, and the DevTools won't pause unless the developer
   // takes the extra step of enabling pause on caught exceptions. This is
-  // untintuitive, though, because even though React has caught the error, from
+  // unintuitive, though, because even though React has caught the error, from
   // the developer's perspective, the error is uncaught.
   //
   // To preserve the expected "Pause on exceptions" behavior, we don't use a
@@ -139,16 +139,22 @@ var warningWithoutStack = function () {};
     if (format === undefined) {
       throw new Error('`warningWithoutStack(condition, format, ...args)` requires a warning ' + 'message argument');
     }
+    if (args.length > 8) {
+      // Check before the condition to catch violations early.
+      throw new Error('warningWithoutStack() currently supports at most 8 arguments.');
+    }
     if (condition) {
       return;
     }
     if (typeof console !== 'undefined') {
-      var _console;
-
-      var stringArgs = args.map(function (item) {
+      var argsWithFormat = args.map(function (item) {
         return '' + item;
       });
-      (_console = console).error.apply(_console, ['Warning: ' + format].concat(stringArgs));
+      argsWithFormat.unshift('Warning: ' + format);
+
+      // We intentionally don't use spread (or .apply) directly because it
+      // breaks IE9: https://github.com/facebook/react/issues/13610
+      Function.prototype.apply.call(console.error, console, argsWithFormat);
     }
     try {
       // --- Welcome to debugging React ---
@@ -165,16 +171,16 @@ var warningWithoutStack = function () {};
 
 var warningWithoutStack$1 = warningWithoutStack;
 
-var getFiberCurrentPropsFromNode = null;
-var getInstanceFromNode = null;
-var getNodeFromInstance = null;
+var getFiberCurrentPropsFromNode$1 = null;
+var getInstanceFromNode$1 = null;
+var getNodeFromInstance$1 = null;
 
 function setComponentTree(getFiberCurrentPropsFromNodeImpl, getInstanceFromNodeImpl, getNodeFromInstanceImpl) {
-  getFiberCurrentPropsFromNode = getFiberCurrentPropsFromNodeImpl;
-  getInstanceFromNode = getInstanceFromNodeImpl;
-  getNodeFromInstance = getNodeFromInstanceImpl;
+  getFiberCurrentPropsFromNode$1 = getFiberCurrentPropsFromNodeImpl;
+  getInstanceFromNode$1 = getInstanceFromNodeImpl;
+  getNodeFromInstance$1 = getNodeFromInstanceImpl;
   {
-    !(getNodeFromInstance && getInstanceFromNode) ? warningWithoutStack$1(false, 'EventPluginUtils.setComponentTree(...): Injected ' + 'module is missing getNodeFromInstance or getInstanceFromNode.') : void 0;
+    !(getNodeFromInstance$1 && getInstanceFromNode$1) ? warningWithoutStack$1(false, 'EventPluginUtils.setComponentTree(...): Injected ' + 'module is missing getNodeFromInstance or getInstanceFromNode.') : void 0;
   }
 }
 
@@ -256,7 +262,7 @@ function executeDirectDispatch(event) {
   var dispatchListener = event._dispatchListeners;
   var dispatchInstance = event._dispatchInstances;
   !!Array.isArray(dispatchListener) ? invariant(false, 'executeDirectDispatch(...): Invalid `event`.') : void 0;
-  event.currentTarget = dispatchListener ? getNodeFromInstance(dispatchInstance) : null;
+  event.currentTarget = dispatchListener ? getNodeFromInstance$1(dispatchInstance) : null;
   var res = dispatchListener ? dispatchListener(event) : null;
   event.currentTarget = null;
   event._dispatchListeners = null;
@@ -272,10 +278,10 @@ function hasDispatches(event) {
   return !!event._dispatchListeners;
 }
 
-// Before we know whether it is functional or class
+// Before we know whether it is function or class
  // Root of a host tree. Could be nested inside another node.
  // A subtree. Could be an entry point to a different renderer.
-var HostComponent = 7;
+var HostComponent = 5;
 
 function getParent(inst) {
   do {
@@ -554,7 +560,7 @@ function getListener(inst, registrationName) {
     // Work in progress (ex: onload events in incremental mode).
     return null;
   }
-  var props = getFiberCurrentPropsFromNode(stateNode);
+  var props = getFiberCurrentPropsFromNode$1(stateNode);
   if (!props) {
     // Work in progress.
     return null;
@@ -1558,7 +1564,7 @@ function noResponderTouches(nativeEvent) {
     var target = activeTouch.target;
     if (target !== null && target !== undefined && target !== 0) {
       // Is the original touch location inside of the current responder?
-      var targetInst = getInstanceFromNode(target);
+      var targetInst = getInstanceFromNode$1(target);
       if (isAncestor(responderInst, targetInst)) {
         return false;
       }
@@ -1645,20 +1651,23 @@ var ResponderEventPlugin = {
   }
 };
 
-// This is used by react-native-web.
-function injectComponentTree(ComponentTree) {
-  setComponentTree(ComponentTree.getFiberCurrentPropsFromNode, ComponentTree.getInstanceFromNode, ComponentTree.getNodeFromInstance);
-}
-
 // Inject react-dom's ComponentTree into this module.
-var ReactDOMComponentTree = ReactDOM.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactDOMComponentTree;
+// Keep in sync with ReactDOM.js and ReactTestUtils.js:
+var _ReactDOM$__SECRET_IN = ReactDOM.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.Events;
+var getInstanceFromNode = _ReactDOM$__SECRET_IN[0];
+var getNodeFromInstance = _ReactDOM$__SECRET_IN[1];
+var getFiberCurrentPropsFromNode = _ReactDOM$__SECRET_IN[2];
+var injectEventPluginsByName = _ReactDOM$__SECRET_IN[3];
 
-setComponentTree(ReactDOMComponentTree.getFiberCurrentPropsFromNode, ReactDOMComponentTree.getInstanceFromNode, ReactDOMComponentTree.getNodeFromInstance);
+
+setComponentTree(getFiberCurrentPropsFromNode, getInstanceFromNode, getNodeFromInstance);
+
+
 
 var ReactDOMUnstableNativeDependencies = Object.freeze({
-	injectComponentTree: injectComponentTree,
 	ResponderEventPlugin: ResponderEventPlugin,
-	ResponderTouchHistoryStore: ResponderTouchHistoryStore
+	ResponderTouchHistoryStore: ResponderTouchHistoryStore,
+	injectEventPluginsByName: injectEventPluginsByName
 });
 
 var unstableNativeDependencies = ReactDOMUnstableNativeDependencies;

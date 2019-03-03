@@ -1,7 +1,7 @@
-/** @license React v16.4.1
+/** @license React v16.6.1
  * react.development.js
  *
- * Copyright (c) 2013-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,7 +17,7 @@
 
 // TODO: this is special because it gets imported during build.
 
-var ReactVersion = '16.4.1';
+var ReactVersion = '16.8.3';
 
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
@@ -30,9 +30,12 @@ var REACT_STRICT_MODE_TYPE = hasSymbol ? Symbol.for('react.strict_mode') : 0xeac
 var REACT_PROFILER_TYPE = hasSymbol ? Symbol.for('react.profiler') : 0xead2;
 var REACT_PROVIDER_TYPE = hasSymbol ? Symbol.for('react.provider') : 0xeacd;
 var REACT_CONTEXT_TYPE = hasSymbol ? Symbol.for('react.context') : 0xeace;
-var REACT_ASYNC_MODE_TYPE = hasSymbol ? Symbol.for('react.async_mode') : 0xeacf;
+
+var REACT_CONCURRENT_MODE_TYPE = hasSymbol ? Symbol.for('react.concurrent_mode') : 0xeacf;
 var REACT_FORWARD_REF_TYPE = hasSymbol ? Symbol.for('react.forward_ref') : 0xead0;
-var REACT_PLACEHOLDER_TYPE = hasSymbol ? Symbol.for('react.placeholder') : 0xead1;
+var REACT_SUSPENSE_TYPE = hasSymbol ? Symbol.for('react.suspense') : 0xead1;
+var REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
+var REACT_LAZY_TYPE = hasSymbol ? Symbol.for('react.lazy') : 0xead4;
 
 var MAYBE_ITERATOR_SYMBOL = typeof Symbol === 'function' && Symbol.iterator;
 var FAUX_ITERATOR_SYMBOL = '@@iterator';
@@ -47,86 +50,6 @@ function getIteratorFn(maybeIterable) {
   }
   return null;
 }
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var validateFormat = function () {};
-
-{
-  validateFormat = function (format) {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  };
-}
-
-function invariant(condition, format, a, b, c, d, e, f) {
-  validateFormat(format);
-
-  if (!condition) {
-    var error = void 0;
-    if (format === undefined) {
-      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error(format.replace(/%s/g, function () {
-        return args[argIndex++];
-      }));
-      error.name = 'Invariant Violation';
-    }
-
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-}
-
-// Relying on the `invariant()` implementation lets us
-// preserve the format and params in the www builds.
-
-// Exports ReactDOM.createRoot
-
-
-// Experimental error-boundary API that can recover from errors within a single
-// render phase
-
-// Suspense
-var enableSuspense = true;
-// Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
-
-
-// In some cases, StrictMode should also double-render lifecycles.
-// This can be confusing for tests though,
-// And it can be bad for performance in production.
-// This feature flag can be used to control the behavior:
-
-
-// To preserve the "Pause on caught exceptions" behavior of the debugger, we
-// replay the begin phase of a failed component inside invokeGuardedCallback.
-
-
-// Warn about deprecated, async-unsafe lifecycles; relates to RFC #6:
-
-
-// Warn about legacy context API
-
-
-// Gather advanced timing metrics for Profiler subtrees.
-
-
-// Track which interactions trigger each commit.
-
-
-// Only used in www builds.
 
 /*
 object-assign
@@ -220,6 +143,51 @@ var objectAssign = shouldUseNative() ? Object.assign : function (target, source)
 };
 
 /**
+ * Use invariant() to assert state which your program assumes to be true.
+ *
+ * Provide sprintf-style format (only %s is supported) and arguments
+ * to provide information about what broke and what you were
+ * expecting.
+ *
+ * The invariant message will be stripped in production, but the invariant
+ * will remain to ensure logic does not differ in production.
+ */
+
+var validateFormat = function () {};
+
+{
+  validateFormat = function (format) {
+    if (format === undefined) {
+      throw new Error('invariant requires an error message argument');
+    }
+  };
+}
+
+function invariant(condition, format, a, b, c, d, e, f) {
+  validateFormat(format);
+
+  if (!condition) {
+    var error = void 0;
+    if (format === undefined) {
+      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
+    } else {
+      var args = [a, b, c, d, e, f];
+      var argIndex = 0;
+      error = new Error(format.replace(/%s/g, function () {
+        return args[argIndex++];
+      }));
+      error.name = 'Invariant Violation';
+    }
+
+    error.framesToPop = 1; // we don't care about invariant's own frame
+    throw error;
+  }
+}
+
+// Relying on the `invariant()` implementation lets us
+// preserve the format and params in the www builds.
+
+/**
  * Forked from fbjs/warning:
  * https://github.com/facebook/fbjs/blob/e66ba20ad5be433eb54423f2b097d829324d9de6/packages/fbjs/src/__forks__/warning.js
  *
@@ -290,16 +258,22 @@ var warningWithoutStack = function () {};
     if (format === undefined) {
       throw new Error('`warningWithoutStack(condition, format, ...args)` requires a warning ' + 'message argument');
     }
+    if (args.length > 8) {
+      // Check before the condition to catch violations early.
+      throw new Error('warningWithoutStack() currently supports at most 8 arguments.');
+    }
     if (condition) {
       return;
     }
     if (typeof console !== 'undefined') {
-      var _console;
-
-      var stringArgs = args.map(function (item) {
+      var argsWithFormat = args.map(function (item) {
         return '' + item;
       });
-      (_console = console).error.apply(_console, ['Warning: ' + format].concat(stringArgs));
+      argsWithFormat.unshift('Warning: ' + format);
+
+      // We intentionally don't use spread (or .apply) directly because it
+      // breaks IE9: https://github.com/facebook/react/issues/13610
+      Function.prototype.apply.call(console.error, console, argsWithFormat);
     }
     try {
       // --- Welcome to debugging React ---
@@ -523,6 +497,1103 @@ function createRef() {
   return refObject;
 }
 
+var enableSchedulerDebugging = false;
+
+// The DOM Scheduler implementation is similar to requestIdleCallback. It
+// works by scheduling a requestAnimationFrame, storing the time for the start
+// of the frame, then scheduling a postMessage which gets scheduled after paint.
+// Within the postMessage handler do as much work as possible until time + frame
+// rate. By separating the idle call into a separate event tick we ensure that
+// layout, paint and other browser work is counted against the available time.
+// The frame rate is dynamically adjusted.
+
+var requestHostCallback = void 0;
+var cancelHostCallback = void 0;
+var shouldYieldToHost = void 0;
+var getCurrentTime = void 0;
+
+var hasNativePerformanceNow = typeof performance === 'object' && typeof performance.now === 'function';
+
+// We capture a local reference to any global, in case it gets polyfilled after
+// this module is initially evaluated. We want to be using a
+// consistent implementation.
+var localDate = Date;
+
+// This initialization code may run even on server environments if a component
+// just imports ReactDOM (e.g. for findDOMNode). Some environments might not
+// have setTimeout or clearTimeout. However, we always expect them to be defined
+// on the client. https://github.com/facebook/react/pull/13088
+var localSetTimeout = typeof setTimeout === 'function' ? setTimeout : undefined;
+var localClearTimeout = typeof clearTimeout === 'function' ? clearTimeout : undefined;
+
+// We don't expect either of these to necessarily be defined, but we will error
+// later if they are missing on the client.
+var localRequestAnimationFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : undefined;
+var localCancelAnimationFrame = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : undefined;
+
+// requestAnimationFrame does not run when the tab is in the background. If
+// we're backgrounded we prefer for that work to happen so that the page
+// continues to load in the background. So we also schedule a 'setTimeout' as
+// a fallback.
+// TODO: Need a better heuristic for backgrounded work.
+var ANIMATION_FRAME_TIMEOUT = 100;
+var rAFID = void 0;
+var rAFTimeoutID = void 0;
+var requestAnimationFrameWithTimeout = function (callback) {
+  // schedule rAF and also a setTimeout
+  rAFID = localRequestAnimationFrame(function (timestamp) {
+    // cancel the setTimeout
+    localClearTimeout(rAFTimeoutID);
+    callback(timestamp);
+  });
+  rAFTimeoutID = localSetTimeout(function () {
+    // cancel the requestAnimationFrame
+    localCancelAnimationFrame(rAFID);
+    callback(getCurrentTime());
+  }, ANIMATION_FRAME_TIMEOUT);
+};
+
+if (hasNativePerformanceNow) {
+  var Performance = performance;
+  getCurrentTime = function () {
+    return Performance.now();
+  };
+} else {
+  getCurrentTime = function () {
+    return localDate.now();
+  };
+}
+
+if (
+// If Scheduler runs in a non-DOM environment, it falls back to a naive
+// implementation using setTimeout.
+typeof window === 'undefined' ||
+// Check if MessageChannel is supported, too.
+typeof MessageChannel !== 'function') {
+  // If this accidentally gets imported in a non-browser environment, e.g. JavaScriptCore,
+  // fallback to a naive implementation.
+  var _callback = null;
+  var _flushCallback = function (didTimeout) {
+    if (_callback !== null) {
+      try {
+        _callback(didTimeout);
+      } finally {
+        _callback = null;
+      }
+    }
+  };
+  requestHostCallback = function (cb, ms) {
+    if (_callback !== null) {
+      // Protect against re-entrancy.
+      setTimeout(requestHostCallback, 0, cb);
+    } else {
+      _callback = cb;
+      setTimeout(_flushCallback, 0, false);
+    }
+  };
+  cancelHostCallback = function () {
+    _callback = null;
+  };
+  shouldYieldToHost = function () {
+    return false;
+  };
+} else {
+  if (typeof console !== 'undefined') {
+    // TODO: Remove fb.me link
+    if (typeof localRequestAnimationFrame !== 'function') {
+      console.error("This browser doesn't support requestAnimationFrame. " + 'Make sure that you load a ' + 'polyfill in older browsers. https://fb.me/react-polyfills');
+    }
+    if (typeof localCancelAnimationFrame !== 'function') {
+      console.error("This browser doesn't support cancelAnimationFrame. " + 'Make sure that you load a ' + 'polyfill in older browsers. https://fb.me/react-polyfills');
+    }
+  }
+
+  var scheduledHostCallback = null;
+  var isMessageEventScheduled = false;
+  var timeoutTime = -1;
+
+  var isAnimationFrameScheduled = false;
+
+  var isFlushingHostCallback = false;
+
+  var frameDeadline = 0;
+  // We start out assuming that we run at 30fps but then the heuristic tracking
+  // will adjust this value to a faster fps if we get more frequent animation
+  // frames.
+  var previousFrameTime = 33;
+  var activeFrameTime = 33;
+
+  shouldYieldToHost = function () {
+    return frameDeadline <= getCurrentTime();
+  };
+
+  // We use the postMessage trick to defer idle work until after the repaint.
+  var channel = new MessageChannel();
+  var port = channel.port2;
+  channel.port1.onmessage = function (event) {
+    isMessageEventScheduled = false;
+
+    var prevScheduledCallback = scheduledHostCallback;
+    var prevTimeoutTime = timeoutTime;
+    scheduledHostCallback = null;
+    timeoutTime = -1;
+
+    var currentTime = getCurrentTime();
+
+    var didTimeout = false;
+    if (frameDeadline - currentTime <= 0) {
+      // There's no time left in this idle period. Check if the callback has
+      // a timeout and whether it's been exceeded.
+      if (prevTimeoutTime !== -1 && prevTimeoutTime <= currentTime) {
+        // Exceeded the timeout. Invoke the callback even though there's no
+        // time left.
+        didTimeout = true;
+      } else {
+        // No timeout.
+        if (!isAnimationFrameScheduled) {
+          // Schedule another animation callback so we retry later.
+          isAnimationFrameScheduled = true;
+          requestAnimationFrameWithTimeout(animationTick);
+        }
+        // Exit without invoking the callback.
+        scheduledHostCallback = prevScheduledCallback;
+        timeoutTime = prevTimeoutTime;
+        return;
+      }
+    }
+
+    if (prevScheduledCallback !== null) {
+      isFlushingHostCallback = true;
+      try {
+        prevScheduledCallback(didTimeout);
+      } finally {
+        isFlushingHostCallback = false;
+      }
+    }
+  };
+
+  var animationTick = function (rafTime) {
+    if (scheduledHostCallback !== null) {
+      // Eagerly schedule the next animation callback at the beginning of the
+      // frame. If the scheduler queue is not empty at the end of the frame, it
+      // will continue flushing inside that callback. If the queue *is* empty,
+      // then it will exit immediately. Posting the callback at the start of the
+      // frame ensures it's fired within the earliest possible frame. If we
+      // waited until the end of the frame to post the callback, we risk the
+      // browser skipping a frame and not firing the callback until the frame
+      // after that.
+      requestAnimationFrameWithTimeout(animationTick);
+    } else {
+      // No pending work. Exit.
+      isAnimationFrameScheduled = false;
+      return;
+    }
+
+    var nextFrameTime = rafTime - frameDeadline + activeFrameTime;
+    if (nextFrameTime < activeFrameTime && previousFrameTime < activeFrameTime) {
+      if (nextFrameTime < 8) {
+        // Defensive coding. We don't support higher frame rates than 120hz.
+        // If the calculated frame time gets lower than 8, it is probably a bug.
+        nextFrameTime = 8;
+      }
+      // If one frame goes long, then the next one can be short to catch up.
+      // If two frames are short in a row, then that's an indication that we
+      // actually have a higher frame rate than what we're currently optimizing.
+      // We adjust our heuristic dynamically accordingly. For example, if we're
+      // running on 120hz display or 90hz VR display.
+      // Take the max of the two in case one of them was an anomaly due to
+      // missed frame deadlines.
+      activeFrameTime = nextFrameTime < previousFrameTime ? previousFrameTime : nextFrameTime;
+    } else {
+      previousFrameTime = nextFrameTime;
+    }
+    frameDeadline = rafTime + activeFrameTime;
+    if (!isMessageEventScheduled) {
+      isMessageEventScheduled = true;
+      port.postMessage(undefined);
+    }
+  };
+
+  requestHostCallback = function (callback, absoluteTimeout) {
+    scheduledHostCallback = callback;
+    timeoutTime = absoluteTimeout;
+    if (isFlushingHostCallback || absoluteTimeout < 0) {
+      // Don't wait for the next frame. Continue working ASAP, in a new event.
+      port.postMessage(undefined);
+    } else if (!isAnimationFrameScheduled) {
+      // If rAF didn't already schedule one, we need to schedule a frame.
+      // TODO: If this rAF doesn't materialize because the browser throttles, we
+      // might want to still have setTimeout trigger rIC as a backup to ensure
+      // that we keep performing work.
+      isAnimationFrameScheduled = true;
+      requestAnimationFrameWithTimeout(animationTick);
+    }
+  };
+
+  cancelHostCallback = function () {
+    scheduledHostCallback = null;
+    isMessageEventScheduled = false;
+    timeoutTime = -1;
+  };
+}
+
+/* eslint-disable no-var */
+
+// TODO: Use symbols?
+var ImmediatePriority = 1;
+var UserBlockingPriority = 2;
+var NormalPriority = 3;
+var LowPriority = 4;
+var IdlePriority = 5;
+
+// Max 31 bit integer. The max integer size in V8 for 32-bit systems.
+// Math.pow(2, 30) - 1
+// 0b111111111111111111111111111111
+var maxSigned31BitInt = 1073741823;
+
+// Times out immediately
+var IMMEDIATE_PRIORITY_TIMEOUT = -1;
+// Eventually times out
+var USER_BLOCKING_PRIORITY = 250;
+var NORMAL_PRIORITY_TIMEOUT = 5000;
+var LOW_PRIORITY_TIMEOUT = 10000;
+// Never times out
+var IDLE_PRIORITY = maxSigned31BitInt;
+
+// Callbacks are stored as a circular, doubly linked list.
+var firstCallbackNode = null;
+
+var currentDidTimeout = false;
+// Pausing the scheduler is useful for debugging.
+var isSchedulerPaused = false;
+
+var currentPriorityLevel = NormalPriority;
+var currentEventStartTime = -1;
+var currentExpirationTime = -1;
+
+// This is set when a callback is being executed, to prevent re-entrancy.
+var isExecutingCallback = false;
+
+var isHostCallbackScheduled = false;
+
+function ensureHostCallbackIsScheduled() {
+  if (isExecutingCallback) {
+    // Don't schedule work yet; wait until the next time we yield.
+    return;
+  }
+  // Schedule the host callback using the earliest expiration in the list.
+  var expirationTime = firstCallbackNode.expirationTime;
+  if (!isHostCallbackScheduled) {
+    isHostCallbackScheduled = true;
+  } else {
+    // Cancel the existing host callback.
+    cancelHostCallback();
+  }
+  requestHostCallback(flushWork, expirationTime);
+}
+
+function flushFirstCallback() {
+  var flushedNode = firstCallbackNode;
+
+  // Remove the node from the list before calling the callback. That way the
+  // list is in a consistent state even if the callback throws.
+  var next = firstCallbackNode.next;
+  if (firstCallbackNode === next) {
+    // This is the last callback in the list.
+    firstCallbackNode = null;
+    next = null;
+  } else {
+    var lastCallbackNode = firstCallbackNode.previous;
+    firstCallbackNode = lastCallbackNode.next = next;
+    next.previous = lastCallbackNode;
+  }
+
+  flushedNode.next = flushedNode.previous = null;
+
+  // Now it's safe to call the callback.
+  var callback = flushedNode.callback;
+  var expirationTime = flushedNode.expirationTime;
+  var priorityLevel = flushedNode.priorityLevel;
+  var previousPriorityLevel = currentPriorityLevel;
+  var previousExpirationTime = currentExpirationTime;
+  currentPriorityLevel = priorityLevel;
+  currentExpirationTime = expirationTime;
+  var continuationCallback;
+  try {
+    continuationCallback = callback(currentDidTimeout);
+  } finally {
+    currentPriorityLevel = previousPriorityLevel;
+    currentExpirationTime = previousExpirationTime;
+  }
+
+  // A callback may return a continuation. The continuation should be scheduled
+  // with the same priority and expiration as the just-finished callback.
+  if (typeof continuationCallback === 'function') {
+    var continuationNode = {
+      callback: continuationCallback,
+      priorityLevel: priorityLevel,
+      expirationTime: expirationTime,
+      next: null,
+      previous: null
+    };
+
+    // Insert the new callback into the list, sorted by its expiration. This is
+    // almost the same as the code in `scheduleCallback`, except the callback
+    // is inserted into the list *before* callbacks of equal expiration instead
+    // of after.
+    if (firstCallbackNode === null) {
+      // This is the first callback in the list.
+      firstCallbackNode = continuationNode.next = continuationNode.previous = continuationNode;
+    } else {
+      var nextAfterContinuation = null;
+      var node = firstCallbackNode;
+      do {
+        if (node.expirationTime >= expirationTime) {
+          // This callback expires at or after the continuation. We will insert
+          // the continuation *before* this callback.
+          nextAfterContinuation = node;
+          break;
+        }
+        node = node.next;
+      } while (node !== firstCallbackNode);
+
+      if (nextAfterContinuation === null) {
+        // No equal or lower priority callback was found, which means the new
+        // callback is the lowest priority callback in the list.
+        nextAfterContinuation = firstCallbackNode;
+      } else if (nextAfterContinuation === firstCallbackNode) {
+        // The new callback is the highest priority callback in the list.
+        firstCallbackNode = continuationNode;
+        ensureHostCallbackIsScheduled();
+      }
+
+      var previous = nextAfterContinuation.previous;
+      previous.next = nextAfterContinuation.previous = continuationNode;
+      continuationNode.next = nextAfterContinuation;
+      continuationNode.previous = previous;
+    }
+  }
+}
+
+function flushImmediateWork() {
+  if (
+  // Confirm we've exited the outer most event handler
+  currentEventStartTime === -1 && firstCallbackNode !== null && firstCallbackNode.priorityLevel === ImmediatePriority) {
+    isExecutingCallback = true;
+    try {
+      do {
+        flushFirstCallback();
+      } while (
+      // Keep flushing until there are no more immediate callbacks
+      firstCallbackNode !== null && firstCallbackNode.priorityLevel === ImmediatePriority);
+    } finally {
+      isExecutingCallback = false;
+      if (firstCallbackNode !== null) {
+        // There's still work remaining. Request another callback.
+        ensureHostCallbackIsScheduled();
+      } else {
+        isHostCallbackScheduled = false;
+      }
+    }
+  }
+}
+
+function flushWork(didTimeout) {
+  // Exit right away if we're currently paused
+
+  if (enableSchedulerDebugging && isSchedulerPaused) {
+    return;
+  }
+
+  isExecutingCallback = true;
+  var previousDidTimeout = currentDidTimeout;
+  currentDidTimeout = didTimeout;
+  try {
+    if (didTimeout) {
+      // Flush all the expired callbacks without yielding.
+      while (firstCallbackNode !== null && !(enableSchedulerDebugging && isSchedulerPaused)) {
+        // TODO Wrap in feature flag
+        // Read the current time. Flush all the callbacks that expire at or
+        // earlier than that time. Then read the current time again and repeat.
+        // This optimizes for as few performance.now calls as possible.
+        var currentTime = getCurrentTime();
+        if (firstCallbackNode.expirationTime <= currentTime) {
+          do {
+            flushFirstCallback();
+          } while (firstCallbackNode !== null && firstCallbackNode.expirationTime <= currentTime && !(enableSchedulerDebugging && isSchedulerPaused));
+          continue;
+        }
+        break;
+      }
+    } else {
+      // Keep flushing callbacks until we run out of time in the frame.
+      if (firstCallbackNode !== null) {
+        do {
+          if (enableSchedulerDebugging && isSchedulerPaused) {
+            break;
+          }
+          flushFirstCallback();
+        } while (firstCallbackNode !== null && !shouldYieldToHost());
+      }
+    }
+  } finally {
+    isExecutingCallback = false;
+    currentDidTimeout = previousDidTimeout;
+    if (firstCallbackNode !== null) {
+      // There's still work remaining. Request another callback.
+      ensureHostCallbackIsScheduled();
+    } else {
+      isHostCallbackScheduled = false;
+    }
+    // Before exiting, flush all the immediate work that was scheduled.
+    flushImmediateWork();
+  }
+}
+
+function unstable_runWithPriority(priorityLevel, eventHandler) {
+  switch (priorityLevel) {
+    case ImmediatePriority:
+    case UserBlockingPriority:
+    case NormalPriority:
+    case LowPriority:
+    case IdlePriority:
+      break;
+    default:
+      priorityLevel = NormalPriority;
+  }
+
+  var previousPriorityLevel = currentPriorityLevel;
+  var previousEventStartTime = currentEventStartTime;
+  currentPriorityLevel = priorityLevel;
+  currentEventStartTime = getCurrentTime();
+
+  try {
+    return eventHandler();
+  } finally {
+    currentPriorityLevel = previousPriorityLevel;
+    currentEventStartTime = previousEventStartTime;
+
+    // Before exiting, flush all the immediate work that was scheduled.
+    flushImmediateWork();
+  }
+}
+
+function unstable_next(eventHandler) {
+  var priorityLevel = void 0;
+  switch (currentPriorityLevel) {
+    case ImmediatePriority:
+    case UserBlockingPriority:
+    case NormalPriority:
+      // Shift down to normal priority
+      priorityLevel = NormalPriority;
+      break;
+    default:
+      // Anything lower than normal priority should remain at the current level.
+      priorityLevel = currentPriorityLevel;
+      break;
+  }
+
+  var previousPriorityLevel = currentPriorityLevel;
+  var previousEventStartTime = currentEventStartTime;
+  currentPriorityLevel = priorityLevel;
+  currentEventStartTime = getCurrentTime();
+
+  try {
+    return eventHandler();
+  } finally {
+    currentPriorityLevel = previousPriorityLevel;
+    currentEventStartTime = previousEventStartTime;
+
+    // Before exiting, flush all the immediate work that was scheduled.
+    flushImmediateWork();
+  }
+}
+
+function unstable_wrapCallback(callback) {
+  var parentPriorityLevel = currentPriorityLevel;
+  return function () {
+    // This is a fork of runWithPriority, inlined for performance.
+    var previousPriorityLevel = currentPriorityLevel;
+    var previousEventStartTime = currentEventStartTime;
+    currentPriorityLevel = parentPriorityLevel;
+    currentEventStartTime = getCurrentTime();
+
+    try {
+      return callback.apply(this, arguments);
+    } finally {
+      currentPriorityLevel = previousPriorityLevel;
+      currentEventStartTime = previousEventStartTime;
+      flushImmediateWork();
+    }
+  };
+}
+
+function unstable_scheduleCallback(callback, deprecated_options) {
+  var startTime = currentEventStartTime !== -1 ? currentEventStartTime : getCurrentTime();
+
+  var expirationTime;
+  if (typeof deprecated_options === 'object' && deprecated_options !== null && typeof deprecated_options.timeout === 'number') {
+    // FIXME: Remove this branch once we lift expiration times out of React.
+    expirationTime = startTime + deprecated_options.timeout;
+  } else {
+    switch (currentPriorityLevel) {
+      case ImmediatePriority:
+        expirationTime = startTime + IMMEDIATE_PRIORITY_TIMEOUT;
+        break;
+      case UserBlockingPriority:
+        expirationTime = startTime + USER_BLOCKING_PRIORITY;
+        break;
+      case IdlePriority:
+        expirationTime = startTime + IDLE_PRIORITY;
+        break;
+      case LowPriority:
+        expirationTime = startTime + LOW_PRIORITY_TIMEOUT;
+        break;
+      case NormalPriority:
+      default:
+        expirationTime = startTime + NORMAL_PRIORITY_TIMEOUT;
+    }
+  }
+
+  var newNode = {
+    callback: callback,
+    priorityLevel: currentPriorityLevel,
+    expirationTime: expirationTime,
+    next: null,
+    previous: null
+  };
+
+  // Insert the new callback into the list, ordered first by expiration, then
+  // by insertion. So the new callback is inserted any other callback with
+  // equal expiration.
+  if (firstCallbackNode === null) {
+    // This is the first callback in the list.
+    firstCallbackNode = newNode.next = newNode.previous = newNode;
+    ensureHostCallbackIsScheduled();
+  } else {
+    var next = null;
+    var node = firstCallbackNode;
+    do {
+      if (node.expirationTime > expirationTime) {
+        // The new callback expires before this one.
+        next = node;
+        break;
+      }
+      node = node.next;
+    } while (node !== firstCallbackNode);
+
+    if (next === null) {
+      // No callback with a later expiration was found, which means the new
+      // callback has the latest expiration in the list.
+      next = firstCallbackNode;
+    } else if (next === firstCallbackNode) {
+      // The new callback has the earliest expiration in the entire list.
+      firstCallbackNode = newNode;
+      ensureHostCallbackIsScheduled();
+    }
+
+    var previous = next.previous;
+    previous.next = next.previous = newNode;
+    newNode.next = next;
+    newNode.previous = previous;
+  }
+
+  return newNode;
+}
+
+function unstable_pauseExecution() {
+  isSchedulerPaused = true;
+}
+
+function unstable_continueExecution() {
+  isSchedulerPaused = false;
+  if (firstCallbackNode !== null) {
+    ensureHostCallbackIsScheduled();
+  }
+}
+
+function unstable_getFirstCallbackNode() {
+  return firstCallbackNode;
+}
+
+function unstable_cancelCallback(callbackNode) {
+  var next = callbackNode.next;
+  if (next === null) {
+    // Already cancelled.
+    return;
+  }
+
+  if (next === callbackNode) {
+    // This is the only scheduled callback. Clear the list.
+    firstCallbackNode = null;
+  } else {
+    // Remove the callback from its position in the list.
+    if (callbackNode === firstCallbackNode) {
+      firstCallbackNode = next;
+    }
+    var previous = callbackNode.previous;
+    previous.next = next;
+    next.previous = previous;
+  }
+
+  callbackNode.next = callbackNode.previous = null;
+}
+
+function unstable_getCurrentPriorityLevel() {
+  return currentPriorityLevel;
+}
+
+function unstable_shouldYield() {
+  return !currentDidTimeout && (firstCallbackNode !== null && firstCallbackNode.expirationTime < currentExpirationTime || shouldYieldToHost());
+}
+
+
+
+var Scheduler = Object.freeze({
+	unstable_ImmediatePriority: ImmediatePriority,
+	unstable_UserBlockingPriority: UserBlockingPriority,
+	unstable_NormalPriority: NormalPriority,
+	unstable_IdlePriority: IdlePriority,
+	unstable_LowPriority: LowPriority,
+	unstable_runWithPriority: unstable_runWithPriority,
+	unstable_next: unstable_next,
+	unstable_scheduleCallback: unstable_scheduleCallback,
+	unstable_cancelCallback: unstable_cancelCallback,
+	unstable_wrapCallback: unstable_wrapCallback,
+	unstable_getCurrentPriorityLevel: unstable_getCurrentPriorityLevel,
+	unstable_shouldYield: unstable_shouldYield,
+	unstable_continueExecution: unstable_continueExecution,
+	unstable_pauseExecution: unstable_pauseExecution,
+	unstable_getFirstCallbackNode: unstable_getFirstCallbackNode,
+	get unstable_now () { return getCurrentTime; }
+});
+
+// Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
+
+
+// In some cases, StrictMode should also double-render lifecycles.
+// This can be confusing for tests though,
+// And it can be bad for performance in production.
+// This feature flag can be used to control the behavior:
+
+
+// To preserve the "Pause on caught exceptions" behavior of the debugger, we
+// replay the begin phase of a failed component inside invokeGuardedCallback.
+
+
+// Warn about deprecated, async-unsafe lifecycles; relates to RFC #6:
+
+
+// Gather advanced timing metrics for Profiler subtrees.
+
+
+// Trace which interactions trigger each commit.
+var enableSchedulerTracing = true;
+
+// Only used in www builds.
+ // TODO: true? Here it might just be false.
+
+// Only used in www builds.
+
+
+// Only used in www builds.
+
+
+// React Fire: prevent the value and checked attributes from syncing
+// with their related DOM properties
+
+
+// These APIs will no longer be "unstable" in the upcoming 16.7 release,
+// Control this behavior with a flag to support 16.6 minor releases in the meanwhile.
+var enableStableConcurrentModeAPIs = true;
+
+
+
+// See https://github.com/react-native-community/discussions-and-proposals/issues/72 for more information
+// This is a flag so we can fix warnings in RN core before turning it on
+
+var DEFAULT_THREAD_ID = 0;
+
+// Counters used to generate unique IDs.
+var interactionIDCounter = 0;
+var threadIDCounter = 0;
+
+// Set of currently traced interactions.
+// Interactions "stack"–
+// Meaning that newly traced interactions are appended to the previously active set.
+// When an interaction goes out of scope, the previous set (if any) is restored.
+var interactionsRef = null;
+
+// Listener(s) to notify when interactions begin and end.
+var subscriberRef = null;
+
+if (enableSchedulerTracing) {
+  interactionsRef = {
+    current: new Set()
+  };
+  subscriberRef = {
+    current: null
+  };
+}
+
+function unstable_clear(callback) {
+  if (!enableSchedulerTracing) {
+    return callback();
+  }
+
+  var prevInteractions = interactionsRef.current;
+  interactionsRef.current = new Set();
+
+  try {
+    return callback();
+  } finally {
+    interactionsRef.current = prevInteractions;
+  }
+}
+
+function unstable_getCurrent() {
+  if (!enableSchedulerTracing) {
+    return null;
+  } else {
+    return interactionsRef.current;
+  }
+}
+
+function unstable_getThreadID() {
+  return ++threadIDCounter;
+}
+
+function unstable_trace(name, timestamp, callback) {
+  var threadID = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : DEFAULT_THREAD_ID;
+
+  if (!enableSchedulerTracing) {
+    return callback();
+  }
+
+  var interaction = {
+    __count: 1,
+    id: interactionIDCounter++,
+    name: name,
+    timestamp: timestamp
+  };
+
+  var prevInteractions = interactionsRef.current;
+
+  // Traced interactions should stack/accumulate.
+  // To do that, clone the current interactions.
+  // The previous set will be restored upon completion.
+  var interactions = new Set(prevInteractions);
+  interactions.add(interaction);
+  interactionsRef.current = interactions;
+
+  var subscriber = subscriberRef.current;
+  var returnValue = void 0;
+
+  try {
+    if (subscriber !== null) {
+      subscriber.onInteractionTraced(interaction);
+    }
+  } finally {
+    try {
+      if (subscriber !== null) {
+        subscriber.onWorkStarted(interactions, threadID);
+      }
+    } finally {
+      try {
+        returnValue = callback();
+      } finally {
+        interactionsRef.current = prevInteractions;
+
+        try {
+          if (subscriber !== null) {
+            subscriber.onWorkStopped(interactions, threadID);
+          }
+        } finally {
+          interaction.__count--;
+
+          // If no async work was scheduled for this interaction,
+          // Notify subscribers that it's completed.
+          if (subscriber !== null && interaction.__count === 0) {
+            subscriber.onInteractionScheduledWorkCompleted(interaction);
+          }
+        }
+      }
+    }
+  }
+
+  return returnValue;
+}
+
+function unstable_wrap(callback) {
+  var threadID = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT_THREAD_ID;
+
+  if (!enableSchedulerTracing) {
+    return callback;
+  }
+
+  var wrappedInteractions = interactionsRef.current;
+
+  var subscriber = subscriberRef.current;
+  if (subscriber !== null) {
+    subscriber.onWorkScheduled(wrappedInteractions, threadID);
+  }
+
+  // Update the pending async work count for the current interactions.
+  // Update after calling subscribers in case of error.
+  wrappedInteractions.forEach(function (interaction) {
+    interaction.__count++;
+  });
+
+  var hasRun = false;
+
+  function wrapped() {
+    var prevInteractions = interactionsRef.current;
+    interactionsRef.current = wrappedInteractions;
+
+    subscriber = subscriberRef.current;
+
+    try {
+      var returnValue = void 0;
+
+      try {
+        if (subscriber !== null) {
+          subscriber.onWorkStarted(wrappedInteractions, threadID);
+        }
+      } finally {
+        try {
+          returnValue = callback.apply(undefined, arguments);
+        } finally {
+          interactionsRef.current = prevInteractions;
+
+          if (subscriber !== null) {
+            subscriber.onWorkStopped(wrappedInteractions, threadID);
+          }
+        }
+      }
+
+      return returnValue;
+    } finally {
+      if (!hasRun) {
+        // We only expect a wrapped function to be executed once,
+        // But in the event that it's executed more than once–
+        // Only decrement the outstanding interaction counts once.
+        hasRun = true;
+
+        // Update pending async counts for all wrapped interactions.
+        // If this was the last scheduled async work for any of them,
+        // Mark them as completed.
+        wrappedInteractions.forEach(function (interaction) {
+          interaction.__count--;
+
+          if (subscriber !== null && interaction.__count === 0) {
+            subscriber.onInteractionScheduledWorkCompleted(interaction);
+          }
+        });
+      }
+    }
+  }
+
+  wrapped.cancel = function cancel() {
+    subscriber = subscriberRef.current;
+
+    try {
+      if (subscriber !== null) {
+        subscriber.onWorkCanceled(wrappedInteractions, threadID);
+      }
+    } finally {
+      // Update pending async counts for all wrapped interactions.
+      // If this was the last scheduled async work for any of them,
+      // Mark them as completed.
+      wrappedInteractions.forEach(function (interaction) {
+        interaction.__count--;
+
+        if (subscriber && interaction.__count === 0) {
+          subscriber.onInteractionScheduledWorkCompleted(interaction);
+        }
+      });
+    }
+  };
+
+  return wrapped;
+}
+
+var subscribers = null;
+if (enableSchedulerTracing) {
+  subscribers = new Set();
+}
+
+function unstable_subscribe(subscriber) {
+  if (enableSchedulerTracing) {
+    subscribers.add(subscriber);
+
+    if (subscribers.size === 1) {
+      subscriberRef.current = {
+        onInteractionScheduledWorkCompleted: onInteractionScheduledWorkCompleted,
+        onInteractionTraced: onInteractionTraced,
+        onWorkCanceled: onWorkCanceled,
+        onWorkScheduled: onWorkScheduled,
+        onWorkStarted: onWorkStarted,
+        onWorkStopped: onWorkStopped
+      };
+    }
+  }
+}
+
+function unstable_unsubscribe(subscriber) {
+  if (enableSchedulerTracing) {
+    subscribers.delete(subscriber);
+
+    if (subscribers.size === 0) {
+      subscriberRef.current = null;
+    }
+  }
+}
+
+function onInteractionTraced(interaction) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onInteractionTraced(interaction);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+function onInteractionScheduledWorkCompleted(interaction) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onInteractionScheduledWorkCompleted(interaction);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+function onWorkScheduled(interactions, threadID) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onWorkScheduled(interactions, threadID);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+function onWorkStarted(interactions, threadID) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onWorkStarted(interactions, threadID);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+function onWorkStopped(interactions, threadID) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onWorkStopped(interactions, threadID);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+function onWorkCanceled(interactions, threadID) {
+  var didCatchError = false;
+  var caughtError = null;
+
+  subscribers.forEach(function (subscriber) {
+    try {
+      subscriber.onWorkCanceled(interactions, threadID);
+    } catch (error) {
+      if (!didCatchError) {
+        didCatchError = true;
+        caughtError = error;
+      }
+    }
+  });
+
+  if (didCatchError) {
+    throw caughtError;
+  }
+}
+
+
+
+var SchedulerTracing = Object.freeze({
+	get __interactionsRef () { return interactionsRef; },
+	get __subscriberRef () { return subscriberRef; },
+	unstable_clear: unstable_clear,
+	unstable_getCurrent: unstable_getCurrent,
+	unstable_getThreadID: unstable_getThreadID,
+	unstable_trace: unstable_trace,
+	unstable_wrap: unstable_wrap,
+	unstable_subscribe: unstable_subscribe,
+	unstable_unsubscribe: unstable_unsubscribe
+});
+
+/**
+ * Keeps track of the current dispatcher.
+ */
+var ReactCurrentDispatcher = {
+  /**
+   * @internal
+   * @type {ReactComponent}
+   */
+  current: null
+};
+
 /**
  * Keeps track of the current owner.
  *
@@ -534,8 +1605,7 @@ var ReactCurrentOwner = {
    * @internal
    * @type {ReactComponent}
    */
-  current: null,
-  currentDispatcher: null
+  current: null
 };
 
 var BEFORE_SLASH_RE = /^(.*)[\\\/]/;
@@ -569,10 +1639,13 @@ var describeComponentFrame = function (name, source, ownerName) {
 var Resolved = 1;
 
 
+function refineResolvedLazyComponent(lazyComponent) {
+  return lazyComponent._status === Resolved ? lazyComponent._result : null;
+}
 
-
-function refineResolvedThenable(thenable) {
-  return thenable._reactStatus === Resolved ? thenable._reactResult : null;
+function getWrappedName(outerType, innerType, wrapperName) {
+  var functionName = innerType.displayName || innerType.name || '';
+  return outerType.displayName || (functionName !== '' ? wrapperName + '(' + functionName + ')' : wrapperName);
 }
 
 function getComponentName(type) {
@@ -592,8 +1665,8 @@ function getComponentName(type) {
     return type;
   }
   switch (type) {
-    case REACT_ASYNC_MODE_TYPE:
-      return 'AsyncMode';
+    case REACT_CONCURRENT_MODE_TYPE:
+      return 'ConcurrentMode';
     case REACT_FRAGMENT_TYPE:
       return 'Fragment';
     case REACT_PORTAL_TYPE:
@@ -602,8 +1675,8 @@ function getComponentName(type) {
       return 'Profiler';
     case REACT_STRICT_MODE_TYPE:
       return 'StrictMode';
-    case REACT_PLACEHOLDER_TYPE:
-      return 'Placeholder';
+    case REACT_SUSPENSE_TYPE:
+      return 'Suspense';
   }
   if (typeof type === 'object') {
     switch (type.$$typeof) {
@@ -612,16 +1685,17 @@ function getComponentName(type) {
       case REACT_PROVIDER_TYPE:
         return 'Context.Provider';
       case REACT_FORWARD_REF_TYPE:
-        var renderFn = type.render;
-        var functionName = renderFn.displayName || renderFn.name || '';
-        return functionName !== '' ? 'ForwardRef(' + functionName + ')' : 'ForwardRef';
-    }
-    if (typeof type.then === 'function') {
-      var thenable = type;
-      var resolvedThenable = refineResolvedThenable(thenable);
-      if (resolvedThenable) {
-        return getComponentName(resolvedThenable);
-      }
+        return getWrappedName(type, type.render, 'ForwardRef');
+      case REACT_MEMO_TYPE:
+        return getComponentName(type.type);
+      case REACT_LAZY_TYPE:
+        {
+          var thenable = type;
+          var resolvedThenable = refineResolvedLazyComponent(thenable);
+          if (resolvedThenable) {
+            return getComponentName(resolvedThenable);
+          }
+        }
     }
   }
   return null;
@@ -662,10 +1736,23 @@ function setCurrentlyValidatingElement(element) {
 }
 
 var ReactSharedInternals = {
+  ReactCurrentDispatcher: ReactCurrentDispatcher,
   ReactCurrentOwner: ReactCurrentOwner,
   // Used by renderers to avoid bundling object-assign twice in UMD bundles:
   assign: objectAssign
 };
+
+{
+  // Re-export the schedule API(s) for UMD bundles.
+  // This avoids introducing a dependency on a new UMD global in a minor update,
+  // Since that would be a breaking change (e.g. for all existing CodeSandboxes).
+  // This re-export is only required for UMD bundles;
+  // CJS bundles use the shared NPM package.
+  objectAssign(ReactSharedInternals, {
+    Scheduler: Scheduler,
+    SchedulerTracing: SchedulerTracing
+  });
+}
 
 {
   objectAssign(ReactSharedInternals, {
@@ -907,14 +1994,12 @@ function createElement(type, config, children) {
   }
   {
     if (key || ref) {
-      if (typeof props.$$typeof === 'undefined' || props.$$typeof !== REACT_ELEMENT_TYPE) {
-        var displayName = typeof type === 'function' ? type.displayName || type.name || 'Unknown' : type;
-        if (key) {
-          defineKeyPropWarningGetter(props, displayName);
-        }
-        if (ref) {
-          defineRefPropWarningGetter(props, displayName);
-        }
+      var displayName = typeof type === 'function' ? type.displayName || type.name || 'Unknown' : type;
+      if (key) {
+        defineKeyPropWarningGetter(props, displayName);
+      }
+      if (ref) {
+        defineRefPropWarningGetter(props, displayName);
       }
     }
   }
@@ -1338,12 +2423,6 @@ function onlyChild(children) {
   return children;
 }
 
-function readContext(context, observedBits) {
-  var dispatcher = ReactCurrentOwner.currentDispatcher;
-  !(dispatcher !== null) ? invariant(false, 'Context.unstable_read(): Context can only be read while React is rendering, e.g. inside the render method or getDerivedStateFromProps.') : void 0;
-  return dispatcher.readContext(context, observedBits);
-}
-
 function createContext(defaultValue, calculateChangedBits) {
   if (calculateChangedBits === undefined) {
     calculateChangedBits = null;
@@ -1363,18 +2442,82 @@ function createContext(defaultValue, calculateChangedBits) {
     // Secondary renderers store their context values on separate fields.
     _currentValue: defaultValue,
     _currentValue2: defaultValue,
+    // Used to track how many concurrent renderers this context currently
+    // supports within in a single renderer. Such as parallel server rendering.
+    _threadCount: 0,
     // These are circular
     Provider: null,
-    Consumer: null,
-    unstable_read: null
+    Consumer: null
   };
 
   context.Provider = {
     $$typeof: REACT_PROVIDER_TYPE,
     _context: context
   };
-  context.Consumer = context;
-  context.unstable_read = readContext.bind(null, context);
+
+  var hasWarnedAboutUsingNestedContextConsumers = false;
+  var hasWarnedAboutUsingConsumerProvider = false;
+
+  {
+    // A separate object, but proxies back to the original context object for
+    // backwards compatibility. It has a different $$typeof, so we can properly
+    // warn for the incorrect usage of Context as a Consumer.
+    var Consumer = {
+      $$typeof: REACT_CONTEXT_TYPE,
+      _context: context,
+      _calculateChangedBits: context._calculateChangedBits
+    };
+    // $FlowFixMe: Flow complains about not setting a value, which is intentional here
+    Object.defineProperties(Consumer, {
+      Provider: {
+        get: function () {
+          if (!hasWarnedAboutUsingConsumerProvider) {
+            hasWarnedAboutUsingConsumerProvider = true;
+            warning$1(false, 'Rendering <Context.Consumer.Provider> is not supported and will be removed in ' + 'a future major release. Did you mean to render <Context.Provider> instead?');
+          }
+          return context.Provider;
+        },
+        set: function (_Provider) {
+          context.Provider = _Provider;
+        }
+      },
+      _currentValue: {
+        get: function () {
+          return context._currentValue;
+        },
+        set: function (_currentValue) {
+          context._currentValue = _currentValue;
+        }
+      },
+      _currentValue2: {
+        get: function () {
+          return context._currentValue2;
+        },
+        set: function (_currentValue2) {
+          context._currentValue2 = _currentValue2;
+        }
+      },
+      _threadCount: {
+        get: function () {
+          return context._threadCount;
+        },
+        set: function (_threadCount) {
+          context._threadCount = _threadCount;
+        }
+      },
+      Consumer: {
+        get: function () {
+          if (!hasWarnedAboutUsingNestedContextConsumers) {
+            hasWarnedAboutUsingNestedContextConsumers = true;
+            warning$1(false, 'Rendering <Context.Consumer.Consumer> is not supported and will be removed in ' + 'a future major release. Did you mean to render <Context.Consumer> instead?');
+          }
+          return context.Consumer;
+        }
+      }
+    });
+    // $FlowFixMe: Flow complains about missing properties because it doesn't understand defineProperty
+    context.Consumer = Consumer;
+  }
 
   {
     context._currentRenderer = null;
@@ -1385,29 +2528,63 @@ function createContext(defaultValue, calculateChangedBits) {
 }
 
 function lazy(ctor) {
-  var thenable = null;
-  return {
-    then: function (resolve, reject) {
-      if (thenable === null) {
-        // Lazily create thenable by wrapping in an extra thenable.
-        thenable = ctor();
-        ctor = null;
-      }
-      return thenable.then(resolve, reject);
-    },
-
+  var lazyType = {
+    $$typeof: REACT_LAZY_TYPE,
+    _ctor: ctor,
     // React uses these fields to store the result.
-    _reactStatus: -1,
-    _reactResult: null
+    _status: -1,
+    _result: null
   };
+
+  {
+    // In production, this would just set it on the object.
+    var defaultProps = void 0;
+    var propTypes = void 0;
+    Object.defineProperties(lazyType, {
+      defaultProps: {
+        configurable: true,
+        get: function () {
+          return defaultProps;
+        },
+        set: function (newDefaultProps) {
+          warning$1(false, 'React.lazy(...): It is not supported to assign `defaultProps` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
+          defaultProps = newDefaultProps;
+          // Match production behavior more closely:
+          Object.defineProperty(lazyType, 'defaultProps', {
+            enumerable: true
+          });
+        }
+      },
+      propTypes: {
+        configurable: true,
+        get: function () {
+          return propTypes;
+        },
+        set: function (newPropTypes) {
+          warning$1(false, 'React.lazy(...): It is not supported to assign `propTypes` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
+          propTypes = newPropTypes;
+          // Match production behavior more closely:
+          Object.defineProperty(lazyType, 'propTypes', {
+            enumerable: true
+          });
+        }
+      }
+    });
+  }
+
+  return lazyType;
 }
 
 function forwardRef(render) {
   {
-    if (typeof render !== 'function') {
+    if (render != null && render.$$typeof === REACT_MEMO_TYPE) {
+      warningWithoutStack$1(false, 'forwardRef requires a render function but received a `memo` ' + 'component. Instead of forwardRef(memo(...)), use ' + 'memo(forwardRef(...)).');
+    } else if (typeof render !== 'function') {
       warningWithoutStack$1(false, 'forwardRef requires a render function but was given %s.', render === null ? 'null' : typeof render);
     } else {
-      !(render.length === 2) ? warningWithoutStack$1(false, 'forwardRef render functions accept two parameters: props and ref. ' + 'Did you forget to use the ref parameter?') : void 0;
+      !(
+      // Do not warn for 0 arguments because it could be due to usage of the 'arguments' object
+      render.length === 0 || render.length === 2) ? warningWithoutStack$1(false, 'forwardRef render functions accept exactly two parameters: props and ref. %s', render.length === 1 ? 'Did you forget to use the ref parameter?' : 'Any additional parameter will be undefined.') : void 0;
     }
 
     if (render != null) {
@@ -1424,7 +2601,93 @@ function forwardRef(render) {
 function isValidElementType(type) {
   return typeof type === 'string' || typeof type === 'function' ||
   // Note: its typeof might be other than 'symbol' or 'number' if it's a polyfill.
-  type === REACT_FRAGMENT_TYPE || type === REACT_ASYNC_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_PLACEHOLDER_TYPE || typeof type === 'object' && type !== null && (typeof type.then === 'function' || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE);
+  type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || typeof type === 'object' && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE);
+}
+
+function memo(type, compare) {
+  {
+    if (!isValidElementType(type)) {
+      warningWithoutStack$1(false, 'memo: The first argument must be a component. Instead ' + 'received: %s', type === null ? 'null' : typeof type);
+    }
+  }
+  return {
+    $$typeof: REACT_MEMO_TYPE,
+    type: type,
+    compare: compare === undefined ? null : compare
+  };
+}
+
+function resolveDispatcher() {
+  var dispatcher = ReactCurrentDispatcher.current;
+  !(dispatcher !== null) ? invariant(false, 'Hooks can only be called inside the body of a function component. (https://fb.me/react-invalid-hook-call)') : void 0;
+  return dispatcher;
+}
+
+function useContext(Context, unstable_observedBits) {
+  var dispatcher = resolveDispatcher();
+  {
+    !(unstable_observedBits === undefined) ? warning$1(false, 'useContext() second argument is reserved for future ' + 'use in React. Passing it is not supported. ' + 'You passed: %s.%s', unstable_observedBits, typeof unstable_observedBits === 'number' && Array.isArray(arguments[2]) ? '\n\nDid you call array.map(useContext)? ' + 'Calling Hooks inside a loop is not supported. ' + 'Learn more at https://fb.me/rules-of-hooks' : '') : void 0;
+
+    // TODO: add a more generic warning for invalid values.
+    if (Context._context !== undefined) {
+      var realContext = Context._context;
+      // Don't deduplicate because this legitimately causes bugs
+      // and nobody should be using this in existing code.
+      if (realContext.Consumer === Context) {
+        warning$1(false, 'Calling useContext(Context.Consumer) is not supported, may cause bugs, and will be ' + 'removed in a future major release. Did you mean to call useContext(Context) instead?');
+      } else if (realContext.Provider === Context) {
+        warning$1(false, 'Calling useContext(Context.Provider) is not supported. ' + 'Did you mean to call useContext(Context) instead?');
+      }
+    }
+  }
+  return dispatcher.useContext(Context, unstable_observedBits);
+}
+
+function useState(initialState) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useState(initialState);
+}
+
+function useReducer(reducer, initialArg, init) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useReducer(reducer, initialArg, init);
+}
+
+function useRef(initialValue) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useRef(initialValue);
+}
+
+function useEffect(create, inputs) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useEffect(create, inputs);
+}
+
+function useLayoutEffect(create, inputs) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useLayoutEffect(create, inputs);
+}
+
+function useCallback(callback, inputs) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useCallback(callback, inputs);
+}
+
+function useMemo(create, inputs) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useMemo(create, inputs);
+}
+
+function useImperativeHandle(ref, create, inputs) {
+  var dispatcher = resolveDispatcher();
+  return dispatcher.useImperativeHandle(ref, create, inputs);
+}
+
+function useDebugValue(value, formatterFn) {
+  {
+    var dispatcher = resolveDispatcher();
+    return dispatcher.useDebugValue(value, formatterFn);
+  }
 }
 
 /**
@@ -1618,7 +2881,7 @@ function validateExplicitKey(element, parentType) {
 
   setCurrentlyValidatingElement(element);
   {
-    warning$1(false, 'Each child in an array or iterator should have a unique "key" prop.' + '%s%s See https://fb.me/react-warning-keys for more information.', currentComponentErrorInfo, childOwner);
+    warning$1(false, 'Each child in a list should have a unique "key" prop.' + '%s%s See https://fb.me/react-warning-keys for more information.', currentComponentErrorInfo, childOwner);
   }
   setCurrentlyValidatingElement(null);
 }
@@ -1674,16 +2937,17 @@ function validateChildKeys(node, parentType) {
  */
 function validatePropTypes(element) {
   var type = element.type;
-  var name = void 0,
-      propTypes = void 0;
+  if (type === null || type === undefined || typeof type === 'string') {
+    return;
+  }
+  var name = getComponentName(type);
+  var propTypes = void 0;
   if (typeof type === 'function') {
-    // Class or functional component
-    name = type.displayName || type.name;
     propTypes = type.propTypes;
-  } else if (typeof type === 'object' && type !== null && type.$$typeof === REACT_FORWARD_REF_TYPE) {
-    // ForwardRef
-    var functionName = type.render.displayName || type.render.name || '';
-    name = functionName !== '' ? 'ForwardRef(' + functionName + ')' : 'ForwardRef';
+  } else if (typeof type === 'object' && (type.$$typeof === REACT_FORWARD_REF_TYPE ||
+  // Note: Memo only checks outer props here.
+  // Inner props are checked in the reconciler.
+  type.$$typeof === REACT_MEMO_TYPE)) {
     propTypes = type.propTypes;
   } else {
     return;
@@ -1829,11 +3093,23 @@ var React = {
 
   createContext: createContext,
   forwardRef: forwardRef,
+  lazy: lazy,
+  memo: memo,
+
+  useCallback: useCallback,
+  useContext: useContext,
+  useEffect: useEffect,
+  useImperativeHandle: useImperativeHandle,
+  useDebugValue: useDebugValue,
+  useLayoutEffect: useLayoutEffect,
+  useMemo: useMemo,
+  useReducer: useReducer,
+  useRef: useRef,
+  useState: useState,
 
   Fragment: REACT_FRAGMENT_TYPE,
   StrictMode: REACT_STRICT_MODE_TYPE,
-  unstable_AsyncMode: REACT_ASYNC_MODE_TYPE,
-  unstable_Profiler: REACT_PROFILER_TYPE,
+  Suspense: REACT_SUSPENSE_TYPE,
 
   createElement: createElementWithValidation,
   cloneElement: cloneElementWithValidation,
@@ -1842,12 +3118,22 @@ var React = {
 
   version: ReactVersion,
 
+  unstable_ConcurrentMode: REACT_CONCURRENT_MODE_TYPE,
+  unstable_Profiler: REACT_PROFILER_TYPE,
+
   __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: ReactSharedInternals
 };
 
-if (enableSuspense) {
-  React.Placeholder = REACT_PLACEHOLDER_TYPE;
-  React.lazy = lazy;
+// Note: some APIs are added with feature flags.
+// Make sure that stable builds for open source
+// don't modify the React object to avoid deopts.
+// Also let's not expose their names in stable builds.
+
+if (enableStableConcurrentModeAPIs) {
+  React.ConcurrentMode = REACT_CONCURRENT_MODE_TYPE;
+  React.Profiler = REACT_PROFILER_TYPE;
+  React.unstable_ConcurrentMode = undefined;
+  React.unstable_Profiler = undefined;
 }
 
 

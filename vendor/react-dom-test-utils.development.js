@@ -1,7 +1,7 @@
-/** @license React v16.4.1
+/** @license React v16.6.1
  * react-dom-test-utils.development.js
  *
- * Copyright (c) 2013-present, Facebook, Inc.
+ * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -82,16 +82,22 @@ var warningWithoutStack = function () {};
     if (format === undefined) {
       throw new Error('`warningWithoutStack(condition, format, ...args)` requires a warning ' + 'message argument');
     }
+    if (args.length > 8) {
+      // Check before the condition to catch violations early.
+      throw new Error('warningWithoutStack() currently supports at most 8 arguments.');
+    }
     if (condition) {
       return;
     }
     if (typeof console !== 'undefined') {
-      var _console;
-
-      var stringArgs = args.map(function (item) {
+      var argsWithFormat = args.map(function (item) {
         return '' + item;
       });
-      (_console = console).error.apply(_console, ['Warning: ' + format].concat(stringArgs));
+      argsWithFormat.unshift('Warning: ' + format);
+
+      // We intentionally don't use spread (or .apply) directly because it
+      // breaks IE9: https://github.com/facebook/react/issues/13610
+      Function.prototype.apply.call(console.error, console, argsWithFormat);
     }
     try {
       // --- Welcome to debugging React ---
@@ -131,18 +137,25 @@ function get(key) {
 
 var ReactSharedInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
 
+// Prevent newer renderers from RTE when used with older react package versions.
+// Current owner and dispatcher used to share the same ref,
+// but PR #14548 split them out to better support the react-debug-tools package.
+if (!ReactSharedInternals.hasOwnProperty('ReactCurrentDispatcher')) {
+  ReactSharedInternals.ReactCurrentDispatcher = {
+    current: null
+  };
+}
+
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
 
-var FunctionalComponent = 0;
-var FunctionalComponentLazy = 1;
-var ClassComponent = 2;
-var ClassComponentLazy = 3;
- // Before we know whether it is functional or class
-var HostRoot = 5; // Root of a host tree. Could be nested inside another node.
+var FunctionComponent = 0;
+var ClassComponent = 1;
+ // Before we know whether it is function or class
+var HostRoot = 3; // Root of a host tree. Could be nested inside another node.
  // A subtree. Could be an entry point to a different renderer.
-var HostComponent = 7;
-var HostText = 8;
+var HostComponent = 5;
+var HostText = 6;
 
 // Don't change these two values. They're used by React Dev Tools.
 var NoEffect = /*              */0;
@@ -159,7 +172,8 @@ var Placement = /*             */2;
 
 
 
-// Update & Callback & Ref & Snapshot
+
+// Passive & Update & Callback & Ref & Snapshot
 
 
 // Union of all host effects
@@ -633,6 +647,12 @@ var lowPriorityWarning = function () {};
 
 var lowPriorityWarning$1 = lowPriorityWarning;
 
+/**
+ * HTML nodeType values that represent the type of the node
+ */
+
+var ELEMENT_NODE = 1;
+
 // Do not uses the below two methods directly!
 // Instead use constants exported from DOMTopLevelEventTypes in ReactDOM.
 // (It is the only module that is allowed to access these methods.)
@@ -820,14 +840,23 @@ var TOP_WHEEL = unsafeCastStringToDOMTopLevelType('wheel');
 // Note that events in this list will *not* be listened to at the top level
 // unless they're explicitly whitelisted in `ReactBrowserEventEmitter.listenTo`.
 
+// for .act's return value
 var findDOMNode = ReactDOM.findDOMNode;
-var _ReactDOM$__SECRET_IN = ReactDOM.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
-var EventPluginHub = _ReactDOM$__SECRET_IN.EventPluginHub;
-var EventPluginRegistry = _ReactDOM$__SECRET_IN.EventPluginRegistry;
-var EventPropagators = _ReactDOM$__SECRET_IN.EventPropagators;
-var ReactControlledComponent = _ReactDOM$__SECRET_IN.ReactControlledComponent;
-var ReactDOMComponentTree = _ReactDOM$__SECRET_IN.ReactDOMComponentTree;
-var ReactDOMEventListener = _ReactDOM$__SECRET_IN.ReactDOMEventListener;
+// Keep in sync with ReactDOMUnstableNativeDependencies.js
+// and ReactDOM.js:
+
+var _ReactDOM$__SECRET_IN = ReactDOM.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.Events;
+var getInstanceFromNode = _ReactDOM$__SECRET_IN[0];
+var getNodeFromInstance = _ReactDOM$__SECRET_IN[1];
+var getFiberCurrentPropsFromNode = _ReactDOM$__SECRET_IN[2];
+var injectEventPluginsByName = _ReactDOM$__SECRET_IN[3];
+var eventNameDispatchConfigs = _ReactDOM$__SECRET_IN[4];
+var accumulateTwoPhaseDispatches = _ReactDOM$__SECRET_IN[5];
+var accumulateDirectDispatches = _ReactDOM$__SECRET_IN[6];
+var enqueueStateRestore = _ReactDOM$__SECRET_IN[7];
+var restoreStateIfNeeded = _ReactDOM$__SECRET_IN[8];
+var dispatchEvent = _ReactDOM$__SECRET_IN[9];
+var runEventsInBatch = _ReactDOM$__SECRET_IN[10];
 
 
 function Event(suffix) {}
@@ -847,7 +876,7 @@ var hasWarnedAboutDeprecatedMockComponent = false;
  */
 function simulateNativeEventOnNode(topLevelType, node, fakeNativeEvent) {
   fakeNativeEvent.target = node;
-  ReactDOMEventListener.dispatchEvent(topLevelType, fakeNativeEvent);
+  dispatchEvent(topLevelType, fakeNativeEvent);
 }
 
 /**
@@ -872,7 +901,7 @@ function findAllInRenderedFiberTreeInternal(fiber, test) {
   var node = currentParent;
   var ret = [];
   while (true) {
-    if (node.tag === HostComponent || node.tag === HostText || node.tag === ClassComponent || node.tag === ClassComponentLazy || node.tag === FunctionalComponent || node.tag === FunctionalComponentLazy) {
+    if (node.tag === HostComponent || node.tag === HostText || node.tag === ClassComponent || node.tag === FunctionComponent) {
       var publicInst = node.stateNode;
       if (test(publicInst)) {
         ret.push(publicInst);
@@ -910,7 +939,7 @@ function validateClassInstance(inst, methodName) {
   var stringified = '' + inst;
   if (Array.isArray(inst)) {
     received = 'an array';
-  } else if (inst && inst.nodeType === 1 && inst.tagName) {
+  } else if (inst && inst.nodeType === ELEMENT_NODE && inst.tagName) {
     received = 'a DOM node';
   } else if (stringified === '[object Object]') {
     received = 'object with keys {' + Object.keys(inst).join(', ') + '}';
@@ -919,6 +948,9 @@ function validateClassInstance(inst, methodName) {
   }
   invariant(false, '%s(...): the first argument must be a React class instance. Instead received: %s.', methodName, received);
 }
+
+// a stub element, lazily initialized, used by act() when flushing effects
+var actContainerElement = null;
 
 /**
  * Utilities for making it easy to test React components.
@@ -949,7 +981,7 @@ var ReactTestUtils = {
   },
 
   isDOMComponent: function (inst) {
-    return !!(inst && inst.nodeType === 1 && inst.tagName);
+    return !!(inst && inst.nodeType === ELEMENT_NODE && inst.tagName);
   },
 
   isDOMComponentElement: function (inst) {
@@ -1114,7 +1146,43 @@ var ReactTestUtils = {
   },
 
   Simulate: null,
-  SimulateNative: {}
+  SimulateNative: {},
+
+  act: function (callback) {
+    if (actContainerElement === null) {
+      // warn if we can't actually create the stub element
+      {
+        !(typeof document !== 'undefined' && document !== null && typeof document.createElement === 'function') ? warningWithoutStack$1(false, 'It looks like you called TestUtils.act(...) in a non-browser environment. ' + "If you're using TestRenderer for your tests, you should call " + 'TestRenderer.act(...) instead of TestUtils.act(...).') : void 0;
+      }
+      // then make it
+      actContainerElement = document.createElement('div');
+    }
+
+    var result = ReactDOM.unstable_batchedUpdates(callback);
+    // note: keep these warning messages in sync with
+    // createReactNoop.js and ReactTestRenderer.js
+    {
+      if (result !== undefined) {
+        var addendum = void 0;
+        if (result !== null && typeof result.then === 'function') {
+          addendum = '\n\nIt looks like you wrote ReactTestUtils.act(async () => ...), ' + 'or returned a Promise from the callback passed to it. ' + 'Putting asynchronous logic inside ReactTestUtils.act(...) is not supported.\n';
+        } else {
+          addendum = ' You returned: ' + result;
+        }
+        warningWithoutStack$1(false, 'The callback passed to ReactTestUtils.act(...) function must not return anything.%s', addendum);
+      }
+    }
+    ReactDOM.render(React.createElement('div', null), actContainerElement);
+    // we want the user to not expect a return,
+    // but we want to warn if they use it like they can await on it.
+    return {
+      then: function () {
+        {
+          warningWithoutStack$1(false, 'Do not await the result of calling ReactTestUtils.act(...), it is not a Promise.');
+        }
+      }
+    };
+  }
 };
 
 /**
@@ -1130,7 +1198,7 @@ function makeSimulator(eventType) {
     !!React.isValidElement(domNode) ? invariant(false, 'TestUtils.Simulate expected a DOM node as the first argument but received a React element. Pass the DOM node you wish to simulate the event on instead. Note that TestUtils.Simulate will not work if you are using shallow rendering.') : void 0;
     !!ReactTestUtils.isCompositeComponent(domNode) ? invariant(false, 'TestUtils.Simulate expected a DOM node as the first argument but received a component instance. Pass the DOM node you wish to simulate the event on instead.') : void 0;
 
-    var dispatchConfig = EventPluginRegistry.eventNameDispatchConfigs[eventType];
+    var dispatchConfig = eventNameDispatchConfigs[eventType];
 
     var fakeNativeEvent = new Event();
     fakeNativeEvent.target = domNode;
@@ -1138,7 +1206,7 @@ function makeSimulator(eventType) {
 
     // We don't use SyntheticEvent.getPooled in order to not have to worry about
     // properly destroying any properties assigned from `eventData` upon release
-    var targetInst = ReactDOMComponentTree.getInstanceFromNode(domNode);
+    var targetInst = getInstanceFromNode(domNode);
     var event = new SyntheticEvent(dispatchConfig, targetInst, fakeNativeEvent, domNode);
 
     // Since we aren't using pooling, always persist the event. This will make
@@ -1147,18 +1215,18 @@ function makeSimulator(eventType) {
     _assign(event, eventData);
 
     if (dispatchConfig.phasedRegistrationNames) {
-      EventPropagators.accumulateTwoPhaseDispatches(event);
+      accumulateTwoPhaseDispatches(event);
     } else {
-      EventPropagators.accumulateDirectDispatches(event);
+      accumulateDirectDispatches(event);
     }
 
     ReactDOM.unstable_batchedUpdates(function () {
       // Normally extractEvent enqueues a state restore, but we'll just always
-      // do that since we we're by-passing it here.
-      ReactControlledComponent.enqueueStateRestore(domNode);
-      EventPluginHub.runEventsInBatch(event, true);
+      // do that since we're by-passing it here.
+      enqueueStateRestore(domNode);
+      runEventsInBatch(event);
     });
-    ReactControlledComponent.restoreStateIfNeeded();
+    restoreStateIfNeeded();
   };
 }
 
@@ -1166,7 +1234,7 @@ function buildSimulators() {
   ReactTestUtils.Simulate = {};
 
   var eventType = void 0;
-  for (eventType in EventPluginRegistry.eventNameDispatchConfigs) {
+  for (eventType in eventNameDispatchConfigs) {
     /**
      * @param {!Element|ReactDOMComponent} domComponentOrNode
      * @param {?object} eventData Fake event data to use in SyntheticEvent.
@@ -1174,18 +1242,6 @@ function buildSimulators() {
     ReactTestUtils.Simulate[eventType] = makeSimulator(eventType);
   }
 }
-
-// Rebuild ReactTestUtils.Simulate whenever event plugins are injected
-var oldInjectEventPluginOrder = EventPluginHub.injection.injectEventPluginOrder;
-EventPluginHub.injection.injectEventPluginOrder = function () {
-  oldInjectEventPluginOrder.apply(this, arguments);
-  buildSimulators();
-};
-var oldInjectEventPlugins = EventPluginHub.injection.injectEventPluginsByName;
-EventPluginHub.injection.injectEventPluginsByName = function () {
-  oldInjectEventPlugins.apply(this, arguments);
-  buildSimulators();
-};
 
 buildSimulators();
 
