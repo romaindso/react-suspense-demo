@@ -1,4 +1,4 @@
-import React, { Component, Placeholder, lazy } from "react";
+import React, { Component, Suspense, lazy } from "react";
 import { Container, Title } from "./ui";
 import Loader from "../common/Loader";
 import rocket from "../assets/rocket.gif";
@@ -20,12 +20,12 @@ export default class App extends Component {
     return (
       <Container>
         <Title primary>Lazyyyyyyy loading</Title>
-        <Placeholder
-          delayMs={1000}
+        <Suspense
+          maxDuration={500}
           fallback={<Loader type={rocket} height="256px" />}
         >
           <BigComponent />
-        </Placeholder>
+        </Suspense>
       </Container>
     );
   }

@@ -1,12 +1,12 @@
 import React, { Component, Fragment } from "react";
 import AppLazyLoading from "../suspense-code-splitting/App";
-import AppImages from "../suspense-images/App";
-import AppTodoList from "../suspense-data/App";
+// import AppImages from "../suspense-images/App";
+// import AppTodoList from "../suspense-data/App";
 import { Nav, NavLink } from "./ui";
 
 export default class App extends Component {
   state = {
-    page: "images"
+    page: "lazy-loading"
   };
 
   goTo(page) {
