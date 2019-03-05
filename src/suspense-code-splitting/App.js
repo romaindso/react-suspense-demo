@@ -14,8 +14,7 @@ const BigComponent = lazy(
 
 // const BigComponent = lazy(() => import("./BigComponent"));
 
-
-export default class App extends Component {
+export default class LazyLoadingApp extends Component {
   render() {
     return (
       <Container>
