@@ -1,6 +1,5 @@
 import React from "react";
-import { createResource } from "simple-cache-provider";
-import { withCache } from "../common/withCache";
+import { unstable_createResource } from "react-cache";
 import { PokemonWrapper, Name, ImageWrapper } from "./ui";
 
 function loadImage(src) {
@@ -11,16 +10,16 @@ function loadImage(src) {
   });
 }
 
-const { read } = createResource(loadImage);
+const { read } = unstable_createResource(loadImage);
 
 const Pokemon = props => (
   <PokemonWrapper>
     <ImageWrapper>
       {/* <img alt="pokemon" src={props.pokemon.src} /> */}
-      <img alt="pokemon" src={read(props.cache, props.pokemon.src)} />
+      <img alt="pokemon" src={read(props.pokemon.src)} />
     </ImageWrapper>
     <Name>{props.pokemon.name}</Name>
   </PokemonWrapper>
 );
 
-export default withCache(Pokemon);
+export default Pokemon;

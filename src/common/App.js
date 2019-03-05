@@ -1,12 +1,12 @@
-import React, { Component, Fragment, Suspense } from "react";
+import React, { Component, Fragment } from "react";
 import LazyLoadingApp from "../suspense-code-splitting/App";
-// import AppImages from "../suspense-images/App";
+import PokemonsApp from "../suspense-images/App";
 import TodoListApp from "../suspense-data/App";
 import { Nav, NavLink } from "./ui";
 
 export default class App extends Component {
   state = {
-    page: "todolist"
+    page: "images"
   };
 
   goTo(page) {
@@ -25,7 +25,7 @@ export default class App extends Component {
     } else if (page === "todolist") {
       appToRender = <TodoListApp />;
     } else {
-      appToRender = <AppImages />;
+      appToRender = <PokemonsApp />;
     }
 
     return (

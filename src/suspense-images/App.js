@@ -1,13 +1,12 @@
-import React, { Component, Placeholder } from "react";
-import { createResource } from "simple-cache-provider";
-import { withCache } from "../common/withCache";
+import React, { Component, Suspense } from "react";
+import { unstable_createResource } from "react-cache";
 import { getPokemonList, getPokemonListFull } from "./service";
 import { Container, Title } from "./ui";
 import PokemonList from "./PokemonList";
 import Loader from "../common/Loader";
 import pikachu from "../assets/pikachu.gif";
 
-const getPokemons = createResource(() => {
+const PokemonsResource = unstable_createResource(() => {
   return new Promise(async resolve => {
     const pokemonList = await getPokemonList();
     const pokemonListFull = await getPokemonListFull(pokemonList);
@@ -15,11 +14,12 @@ const getPokemons = createResource(() => {
   });
 });
 
-const Pokemons = withCache(props => (
-  <PokemonList pokemons={getPokemons.read(props.cache)} />
-));
+const Pokemons = () => {
+  const data = PokemonsResource.read();
+  return <PokemonList pokemons={data} />;
+};
 
-export default class App extends Component {
+export default class PokemonsApp extends Component {
   // state = {
   //   pokemons: [],
   //   isLoaded: false
@@ -40,9 +40,9 @@ export default class App extends Component {
         ) : (
             <Loader type={pikachu} />
           )} */}
-        <Placeholder delayMs={1000} fallback={<Loader type={pikachu} />}>
+        <Suspense maxDuration={1000} fallback={<Loader type={pikachu} />}>
           <Pokemons />
-        </Placeholder>
+        </Suspense>
       </Container>
     );
   }
